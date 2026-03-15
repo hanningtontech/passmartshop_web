@@ -1,0 +1,17 @@
+export const TRENDING_SEARCHES = [
+  "Smart TV",
+  "Sneakers",
+  "Handbags",
+  "Phones",
+  "Earphones",
+  "Blender",
+  "Watches",
+  "Laptops",
+  "Mattress",
+  "Gas Cooker",
+  "Hair Dryer",
+  "Fridge",
+  "Samsung",
+  "Sofa",
+  "Perfume",
+];

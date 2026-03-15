@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1772449563096,
+      "tag": "0000_cheerful_namorita",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1772449850907,
+      "tag": "0001_sudden_invaders",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1773480147901,
+      "tag": "0002_curvy_ultimates",
+      "breakpoints": true
+    }
+  ]
+}

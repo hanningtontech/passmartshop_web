@@ -1,0 +1,9 @@
+{
+  "query": "DROP TABLE IF EXISTS orderItems; DROP TABLE IF EXISTS orders; DROP TABLE IF EXISTS reviews; DROP TABLE IF EXISTS productVariants; DROP TABLE IF EXISTS products; DROP TABLE IF EXISTS categories; DROP TABLE IF EXISTS users;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 6oSGSjC2iYB7pkv.root --database LfQatHKDJNFztMuuF6UrzC --execute DROP TABLE IF EXISTS orderItems; DROP TABLE IF EXISTS orders; DROP TABLE IF EXISTS reviews; DROP TABLE IF EXISTS productVariants; DROP TABLE IF EXISTS products; DROP TABLE IF EXISTS categories; DROP TABLE IF EXISTS users;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1011
+}
