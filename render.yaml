@@ -1,0 +1,20 @@
+# Render manifest to deploy the backend (Node) from the `design` folder.
+# Do NOT store secrets here. Set DATABASE_URL and other secrets in the Render dashboard.
+version: 1
+services:
+  - type: web
+    name: passmartshop-backend
+    env: node
+    # Root where the package.json for the project lives
+    root: design
+    # Build and start commands use the package scripts in design/package.json
+    buildCommand: pnpm install && pnpm run build
+    startCommand: pnpm run start
+    # Automatically deploy on push to the connected repo
+    autoDeploy: true
+    # Environment variables (placeholders) — set actual values in Render dashboard
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        value: "<SET_IN_RENDER_DASHBOARD>"
