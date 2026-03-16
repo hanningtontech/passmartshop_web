@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import cors from "cors";
 import { createServer } from "http";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
@@ -35,6 +36,16 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
+  // Enable CORS for the frontend origin so browser clients can call the API.
+  // Adjust origin to your production frontend domain(s) as needed.
+  app.use(
+    cors({
+      origin: process.env.CORS_ORIGIN || "https://passmartshop.web.app",
+      methods: ["GET", "POST", "OPTIONS"],
+      allowedHeaders: ["Content-Type", "Authorization"],
+      credentials: true,
+    })
+  );
   // tRPC API
   app.use(
     "/api/trpc",
