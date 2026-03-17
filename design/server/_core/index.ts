@@ -4,6 +4,7 @@ import cors from "cors";
 import { COOKIE_NAME } from "../../shared/const";
 import { createServer } from "http";
 import net from "net";
+import mysql from "mysql2/promise";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
@@ -65,6 +66,35 @@ async function startServer() {
     next();
   });
   // tRPC API
+  // Lightweight DB health endpoint for Render -> TiDB connectivity checks.
+  app.get("/health/db", async (_req, res) => {
+    if (!process.env.DATABASE_URL) {
+      return res.status(500).json({ ok: false, error: "DATABASE_URL not set" });
+    }
+
+    try {
+      const dbUrl = new URL(process.env.DATABASE_URL);
+      const conn = await mysql.createConnection({
+        host: dbUrl.hostname,
+        port: Number(dbUrl.port || 3306),
+        user: decodeURIComponent(dbUrl.username),
+        password: decodeURIComponent(dbUrl.password || ""),
+        database: dbUrl.pathname.replace(/^\//, ""),
+        ssl: { rejectUnauthorized: true },
+      });
+      try {
+        const [rows] = await conn.query("SELECT 1 AS ok");
+        await conn.end();
+        return res.json({ ok: true, rows });
+      } catch (qErr) {
+        await conn.end();
+        return res.status(500).json({ ok: false, error: String(qErr) });
+      }
+    } catch (err) {
+      return res.status(500).json({ ok: false, error: String(err) });
+    }
+  });
+
   app.use(
     "/api/trpc",
     createExpressMiddleware({
