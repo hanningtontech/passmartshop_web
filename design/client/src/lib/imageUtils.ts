@@ -39,3 +39,40 @@ export function getLowQualityImageUrl(fullUrl: string): string {
   // Same bucket: xyz.png → xyz-low.png
   return fullUrl.replace(/\.(png|jpg|jpeg|webp|gif)$/i, "-low.$1");
 }
+
+/** Formats numbers like 10000 → "10,000" (no decimals). */
+export function formatCurrency(amount: number | null | undefined): string {
+  if (amount == null || !Number.isFinite(Number(amount))) return "0";
+  try {
+    return new Intl.NumberFormat("en-KE", {
+      maximumFractionDigits: 0,
+    }).format(Number(amount));
+  } catch {
+    return String(Math.round(Number(amount)));
+  }
+}
+
+/**
+ * Builds a basic srcSet string for a given image URL and target widths.
+ *
+ * If the URL contains "{width}", that placeholder is replaced with each width.
+ * Otherwise, a "?w={width}" query param is appended (suitable for CDNs that
+ * accept a width parameter). If your CDN uses a different convention, adapt here.
+ */
+export function buildSrcSet(fullUrl: string, widths: number[]): string | undefined {
+  if (!fullUrl || !Array.isArray(widths) || widths.length === 0) return undefined;
+  const uniqueWidths = Array.from(new Set(widths.filter((w) => Number.isFinite(w) && w > 0))).sort(
+    (a, b) => a - b
+  );
+  if (uniqueWidths.length === 0) return undefined;
+
+  const hasPlaceholder = fullUrl.includes("{width}");
+  const baseUrl = fullUrl.replace(/\s/g, "");
+
+  const parts = uniqueWidths.map((w) => {
+    const url = hasPlaceholder ? baseUrl.replace("{width}", String(w)) : `${baseUrl}?w=${w}`;
+    return `${url} ${w}w`;
+  });
+
+  return parts.join(", ");
+}

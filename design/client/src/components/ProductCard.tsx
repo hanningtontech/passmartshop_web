@@ -3,9 +3,9 @@ import { ShoppingCart, Flame } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProgressiveImage } from "@/components/ProgressiveImage";
-import { getLowQualityImageUrl } from "@/lib/imageUtils";
 import { useState } from "react";
 import { useCart } from "@/contexts/CartContext";
+import { buildSrcSet, formatCurrency, getLowQualityImageUrl } from "@/lib/imageUtils";
 
 type ProductCardData = {
   id: string | number;
@@ -17,9 +17,6 @@ type ProductCardData = {
   images?: string[];
   imageUrls?: string[];
   primaryImageUrl?: string;
-  imagesLow?: string[];
-  imageUrlsLow?: string[];
-  primaryImageUrlLow?: string;
   featured?: boolean;
   isNew?: boolean;
   rating?: number;
@@ -81,12 +78,11 @@ export default function ProductCard({
     (product.imageUrls && product.imageUrls[0]) ||
     product.primaryImageUrl ||
     "";
-  const imagePlaceholderSrc =
-    (product.imagesLow && product.imagesLow[0]) ||
-    (product.imageUrlsLow && product.imageUrlsLow[0]) ||
-    product.primaryImageUrlLow ||
-    (imageSrc ? getLowQualityImageUrl(imageSrc) : null) ||
-    null;
+  const cardImageSrc = imageSrc;
+  const cardImageLow = cardImageSrc ? getLowQualityImageUrl(cardImageSrc) : null;
+  const cardImageSrcSet = cardImageSrc
+    ? buildSrcSet(cardImageSrc, isSmall ? [160, 240, 320, 400] : [240, 360, 480, 640])
+    : undefined;
 
   return (
     <Card className="hover:shadow-sm transition-shadow duration-300 overflow-hidden group min-w-0 flex flex-col pt-0 h-full">
@@ -95,16 +91,19 @@ export default function ProductCard({
         <Link href={`/product/${product.id}`} className="block min-w-0 flex-shrink-0">
           {/* Image holder: pure 4:5, scales with card width on any screen */}
           <div className={`relative w-full ${isSmall ? "aspect-square" : "aspect-[4/5]"} overflow-hidden bg-gray-100 cursor-pointer`}>
-            {imageSrc ? (
+            {cardImageSrc ? (
               <>
                 {!imageLoaded && (
                   <Skeleton className="absolute inset-0 w-full h-full rounded-none" />
                 )}
                 <ProgressiveImage
-                  src={imageSrc}
-                  placeholderSrc={imagePlaceholderSrc}
+                  src={cardImageSrc}
+                  placeholderSrc={cardImageLow}
                   alt={product.name}
                   loading="lazy"
+                  /* Rough responsive hint: cards are 50vw on small, 33vw on sm, 25vw on lg, 20vw on xl */
+                  sizes="(min-width: 1280px) 20vw, (min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
+                  srcSet={cardImageSrcSet}
                   containerClassName="absolute inset-0 group-hover:scale-110 transition-transform duration-300"
                   className="group-hover:scale-110 transition-transform duration-300"
                   onLoad={() => setImageLoaded(true)}
@@ -184,29 +183,29 @@ export default function ProductCard({
         {/* Content – compact spacing and fixed height to keep cards consistent */}
         <div
           className={`${
-            isSmall ? "px-1 pt-1 pb-0.5" : "px-1 pt-1 pb-1 sm:px-1.5 sm:pt-1.5 sm:pb-1"
+            isSmall ? "px-1 pt-1 pb-0.5" : "px-1 pt-1 pb-1.5 sm:px-1.5 sm:pt-1.5 sm:pb-2"
           } flex flex-col flex-1 min-h-0 ${isSmall ? "h-[80px]" : "h-[100px]"} overflow-hidden`}
         >
           <Link href={`/product/${product.id}`} className="min-w-0">
-            <h3 className={`font-semibold ${isSmall ? "text-[10px]" : "text-[11px]"} leading-snug mb-0.5 line-clamp-2 hover:text-orange-500 transition cursor-pointer break-words`}>
+            <h3 className={`font-semibold ${isSmall ? "text-[12px]" : "text-[13px]"} leading-snug mb-0.5 line-clamp-2 hover:text-orange-500 transition cursor-pointer break-words`}>
               {product.name}
             </h3>
           </Link>
 
           <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0 mb-1 min-w-0">
-            <span className={`${isSmall ? "text-[11px]" : "text-[12px]"} font-bold text-orange-600 whitespace-nowrap`}>
-              KSh {basePrice.toFixed(0)}
+            <span className={`${isSmall ? "text-[12px]" : "text-[13px]"} font-bold text-orange-600 whitespace-nowrap`}>
+              KSh {formatCurrency(basePrice)}
             </span>
             {originalPrice && (
-              <span className={`${isSmall ? "text-[10px]" : "text-[11px]"} text-gray-500 line-through whitespace-nowrap`}>
-                KSh {originalPrice.toFixed(0)}
+              <span className={`${isSmall ? "text-[11px]" : "text-[12px]"} text-gray-500 line-through whitespace-nowrap`}>
+                KSh {formatCurrency(originalPrice)}
               </span>
             )}
           </div>
 
           <div className="mt-auto flex-shrink-0">
             {product.inStock ? (
-              <span className={`${isSmall ? "text-[9px]" : "text-[10px]"} text-green-600 font-semibold`}>
+              <span className={`${isSmall ? "text-[11px]" : "text-[12px]"} text-green-600 font-semibold`}>
                 In Stock
                 {(() => {
                   const sq = product.stockQuantity;
@@ -220,7 +219,7 @@ export default function ProductCard({
                 })()}
               </span>
             ) : (
-              <span className={`${isSmall ? "text-[9px]" : "text-[10px]"} text-red-600 font-semibold`}>Out of Stock</span>
+              <span className={`${isSmall ? "text-[11px]" : "text-[12px]"} text-red-600 font-semibold`}>Out of Stock</span>
             )}
           </div>
         </div>

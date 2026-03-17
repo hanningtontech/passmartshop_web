@@ -131,6 +131,23 @@
   input[type="radio"]:not(:disabled) {
     @apply cursor-pointer;
   }
+
+  /* Global typographic scale for headings and body text */
+  h1 {
+    @apply text-3xl sm:text-4xl md:text-5xl font-bold leading-tight;
+  }
+
+  h2 {
+    @apply text-2xl sm:text-3xl md:text-4xl font-bold leading-snug;
+  }
+
+  h3 {
+    @apply text-lg sm:text-xl md:text-2xl font-semibold leading-snug;
+  }
+
+  p {
+    @apply text-sm sm:text-base leading-relaxed;
+  }
 }
 
 /* Utility: hide scrollbars but keep scrolling */

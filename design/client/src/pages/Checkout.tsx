@@ -17,6 +17,7 @@ import {
 import { db } from "@/lib/firebase";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { useAuth } from "@/contexts/AuthContext";
+import { formatCurrency } from "@/lib/imageUtils";
 
 const MPESA_TILL_NUMBER = "0740730781";
 const POLICY_VERSION = 1;
@@ -314,11 +315,11 @@ export default function Checkout() {
                   <div>
                     <p className="font-medium text-gray-900">{item.productName}</p>
                     <p className="text-sm text-gray-500">
-                      Qty: {item.quantity} × KSh {item.price.toFixed(0)}
+                      Qty: {item.quantity} × KSh {formatCurrency(item.price)}
                     </p>
                   </div>
                   <p className="font-semibold text-gray-900 whitespace-nowrap">
-                    KSh {(item.quantity * item.price).toFixed(0)}
+                    KSh {formatCurrency(item.quantity * item.price)}
                   </p>
                 </div>
               </div>
@@ -330,17 +331,17 @@ export default function Checkout() {
             <div className="text-right space-y-1 min-w-[180px]">
               <p className="flex justify-between gap-6 text-gray-700">
                 <span>Shipping</span>
-                <span>{shipping === 0 ? "Free" : `KSh ${shipping.toFixed(0)}`}</span>
+                <span>{shipping === 0 ? "Free" : `KSh ${formatCurrency(shipping)}`}</span>
               </p>
               {TAX_RATE > 0 && (
                 <p className="flex justify-between gap-6 text-gray-700">
                   <span>Tax</span>
-                  <span>KSh {tax.toFixed(0)}</span>
+                  <span>KSh {formatCurrency(tax)}</span>
                 </p>
               )}
               <p className="flex justify-between gap-6 text-lg font-bold text-gray-900 pt-2 border-t border-gray-200">
                 <span>Total</span>
-                <span>KSh {total.toFixed(0)}</span>
+                <span>KSh {formatCurrency(total)}</span>
               </p>
             </div>
           </div>
@@ -498,7 +499,7 @@ export default function Checkout() {
                     </p>
                     <p className="text-xl font-bold text-orange-600 mb-2">{MPESA_TILL_NUMBER}</p>
                     <p className="text-sm text-gray-700 mb-4">
-                      Amount to pay: <span className="font-semibold">KSh {orderTotal.toFixed(0)}</span>
+                      Amount to pay: <span className="font-semibold">KSh {formatCurrency(orderTotal)}</span>
                     </p>
                     <label className="block font-semibold text-gray-900 mb-2">
                       M-Pesa Transaction Code *
@@ -517,7 +518,7 @@ export default function Checkout() {
                 {paymentMethod === "Cash on Delivery" && (
                   <div className="mt-6 p-4 bg-slate-50 border border-slate-200 rounded-lg">
                     <p className="text-gray-700">
-                      You will pay the exact amount of <span className="font-semibold">KSh {orderTotal.toFixed(0)}</span> to the delivery agent upon receiving your order.
+                      You will pay the exact amount of <span className="font-semibold">KSh {formatCurrency(orderTotal)}</span> to the delivery agent upon receiving your order.
                     </p>
                   </div>
                 )}
@@ -601,7 +602,7 @@ export default function Checkout() {
                       {item.name} x {item.quantity}
                     </span>
                     <span className="font-semibold">
-                      KSh {(parseFloat(item.basePrice) * item.quantity).toFixed(0)}
+                      KSh {formatCurrency(parseFloat(item.basePrice) * item.quantity)}
                     </span>
                   </div>
                 ))}
@@ -611,7 +612,7 @@ export default function Checkout() {
               <div className="space-y-2 mb-6">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Subtotal</span>
-                  <span className="font-semibold">KSh {totalPrice.toFixed(0)}</span>
+                  <span className="font-semibold">KSh {formatCurrency(totalPrice)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Shipping</span>
@@ -627,7 +628,7 @@ export default function Checkout() {
                   <div className="flex justify-between">
                     <span className="text-gray-600">Tax ({TAX_RATE * 100}%)</span>
                     <span className="font-semibold">
-                      KSh {(totalPrice * TAX_RATE).toFixed(0)}
+                      KSh {formatCurrency(totalPrice * TAX_RATE)}
                     </span>
                   </div>
                 )}
@@ -636,7 +637,7 @@ export default function Checkout() {
               <div className="flex justify-between text-xl font-bold pt-6 border-t">
                 <span>Total</span>
                 <span className="text-orange-600">
-                  KSh {orderTotal.toFixed(0)}
+                  KSh {formatCurrency(orderTotal)}
                 </span>
               </div>
             </div>

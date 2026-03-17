@@ -1,11 +1,22 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useRoute, useLocation } from "wouter";
-import { ShoppingCart, Heart, ChevronLeft, ChevronRight, Star, Truck, ShieldCheck, RotateCcw, MessageCircle } from "lucide-react";
+import {
+  ShoppingCart,
+  Heart,
+  ChevronLeft,
+  ChevronRight,
+  Star,
+  Truck,
+  ShieldCheck,
+  RotateCcw,
+  MessageCircle,
+  Share2,
+} from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProgressiveImage } from "@/components/ProgressiveImage";
-import { getLowQualityImageUrl } from "@/lib/imageUtils";
+import { buildSrcSet, formatCurrency, getLowQualityImageUrl } from "@/lib/imageUtils";
 import { useCart } from "@/contexts/CartContext";
 import { useBehavior } from "@/contexts/BehaviorContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -524,32 +535,23 @@ export default function ProductDetail() {
       </div>
 
       <div className="container mx-auto px-4 py-8">
-        <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 items-start">
+        <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 items-start">
           {/* Product Images */}
-          <div className="w-full max-w-xl mx-auto md:mx-0">
+          <div className="w-full max-w-sm sm:max-w-md mx-auto md:mx-0">
             <div
-              className="bg-gray-100 rounded-lg overflow-hidden mb-4 relative aspect-[4/5] max-h-[480px] sm:max-h-[520px] md:max-h-[560px] cursor-zoom-in"
+              className="bg-gray-100 rounded-lg overflow-hidden mb-4 flex items-center justify-center cursor-zoom-in"
               onMouseMove={handleImageMouseMove}
               onMouseLeave={handleImageMouseLeave}
             >
               {displayImage ? (
-                <div
-                  className="absolute inset-0 w-full h-full transition-transform duration-75 ease-out"
-                  style={{
-                    transform: imageZoom.active ? "scale(2)" : "scale(1)",
-                    transformOrigin: `${imageZoom.originX}% ${imageZoom.originY}%`,
-                  }}
-                >
-                  <ProgressiveImage
-                    src={displayImage}
-                    placeholderSrc={displayImageLow}
-                    alt={product.name}
-                    loading="eager"
-                    containerClassName="absolute inset-0 h-full w-full"
-                  />
-                </div>
+                <img
+                  src={displayImage}
+                  alt={product.name}
+                  loading="eager"
+                  className="w-full h-auto max-h-[360px] sm:max-h-[420px] md:max-h-[520px] object-contain"
+                />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-gray-400">
+                <div className="w-full h-64 flex items-center justify-center text-gray-400">
                   No image available
                 </div>
               )}
@@ -613,7 +615,9 @@ export default function ProductDetail() {
 
           {/* Product Info */}
           <div>
-            <h1 className="text-4xl font-bold mb-4">{product.name}</h1>
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-3 sm:mb-4">
+              {product.name}
+            </h1>
 
             {/* Rating – from reviews or product */}
             {(displayRating > 0 || displayReviewCount > 0) && (
@@ -637,17 +641,17 @@ export default function ProductDetail() {
             )}
 
             {/* Price */}
-            <div className="flex items-center gap-4 mb-6">
-              <span className="text-4xl font-bold text-orange-600">
-                KSh {basePrice.toFixed(0)}
+            <div className="flex flex-wrap items-baseline gap-3 mb-4 sm:mb-6">
+              <span className="text-2xl sm:text-3xl md:text-4xl font-bold text-orange-600">
+                KSh {formatCurrency(basePrice)}
               </span>
               {originalPrice != null && (
-                <span className="text-2xl text-gray-500 line-through">
-                  KSh {originalPrice.toFixed(0)}
+                <span className="text-lg sm:text-xl md:text-2xl text-gray-500 line-through">
+                  KSh {formatCurrency(originalPrice)}
                 </span>
               )}
               {discount > 0 && (
-                <span className="bg-red-500 text-white px-3 py-1 rounded-lg text-sm font-semibold">
+                <span className="bg-red-500 text-white px-2 sm:px-3 py-0.5 sm:py-1 rounded-lg text-xs sm:text-sm font-semibold">
                   Save {discount}%
                 </span>
               )}
@@ -726,12 +730,12 @@ export default function ProductDetail() {
             )}
 
             {/* Quantity – capped by available stock (and already in cart) */}
-            <div className="mb-8">
-              <h3 className="font-semibold mb-3">Quantity</h3>
-              <div className="flex items-center gap-4">
+            <div className="mb-6">
+              <h3 className="font-semibold mb-2 text-sm sm:text-base">Quantity</h3>
+              <div className="flex items-center gap-3">
                 <button
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                   disabled={quantity <= 1}
                 >
                   −
@@ -747,13 +751,13 @@ export default function ProductDetail() {
                     const cap = maxCanAdd != null ? Math.min(next, maxCanAdd) : next;
                     setQuantity(cap);
                   }}
-                  className="w-16 px-3 py-2 border border-gray-300 rounded-lg text-center"
+                  className="w-14 px-2 py-1.5 border border-gray-300 rounded-lg text-center text-sm"
                 />
                 <button
                   onClick={() =>
                     setQuantity(maxCanAdd != null ? Math.min(quantity + 1, maxCanAdd) : quantity + 1)
                   }
-                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                   disabled={maxCanAdd != null && quantity >= maxCanAdd}
                 >
                   +
@@ -767,10 +771,10 @@ export default function ProductDetail() {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex flex-wrap gap-4 mb-4">
+            <div className="flex flex-wrap gap-3 mb-4">
               <Button
-                size="lg"
-                className="flex-1 min-w-[140px] bg-orange-500 hover:bg-orange-600 text-white"
+                size="sm"
+                className="flex-1 min-w-[120px] sm:min-w-[140px] bg-orange-500 hover:bg-orange-600 text-white py-2 sm:py-2.5"
                 onClick={handleAddToCart}
                 disabled={!canAddToCart || !product.inStock || (maxCanAdd != null && maxCanAdd <= 0)}
               >
@@ -778,17 +782,18 @@ export default function ProductDetail() {
                 Add to Cart
               </Button>
               <Button
-                size="lg"
+                size="sm"
                 variant="outline"
-                className="border-orange-500 text-orange-600 hover:bg-orange-50 min-w-[140px]"
+                className="border-orange-500 text-orange-600 hover:bg-orange-50 min-w-[120px] sm:min-w-[140px] py-2 sm:py-2.5 text-sm"
                 onClick={handleBuyNow}
                 disabled={!canAddToCart || !product.inStock || (maxCanAdd != null && maxCanAdd <= 0)}
               >
                 Buy Now
               </Button>
               <Button
-                size="lg"
+                size="sm"
                 variant="outline"
+                className="px-2.5 py-2"
                 onClick={() => setIsWishlisted(!isWishlisted)}
               >
                 <Heart
@@ -797,13 +802,42 @@ export default function ProductDetail() {
                   }`}
                 />
               </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="px-2.5 py-2"
+                onClick={() => {
+                  const url =
+                    typeof window !== "undefined"
+                      ? window.location.href
+                      : `${window.location.origin}/product/${product.id}`;
+                  const shareText = `Check out this product on Passmartshop: ${product.name}`;
+                  if (navigator.share) {
+                    navigator
+                      .share({
+                        title: product.name,
+                        text: shareText,
+                        url,
+                      })
+                      .catch(() => {
+                        // Swallow errors (user cancelled, etc.)
+                      });
+                  } else if (navigator.clipboard?.writeText) {
+                    navigator.clipboard.writeText(url).catch(() => {});
+                  }
+                }}
+              >
+                <Share2 className="h-5 w-5 mr-1" />
+                Share
+              </Button>
             </div>
 
             {/* WhatsApp order button + rating summary */}
-            <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <Button
                 type="button"
-                className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-2"
+                size="sm"
+                className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-2 py-2 sm:py-2.5 text-sm"
                 onClick={() => {
                   const qty = Math.max(1, quantity);
                   const message = `Hi, I'm interested in this product:%0A- Name: ${encodeURIComponent(

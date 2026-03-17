@@ -1,4 +1,5 @@
 import { Link } from "wouter";
+import { formatCurrency } from "@/lib/imageUtils";
 
 type Product = {
   id: string | number;
@@ -67,11 +68,11 @@ export default function FlashSaleCompactCard({ product }: { product: Product }) 
           </p>
           <div className="flex items-baseline gap-1 flex-wrap">
             <span className="text-[10px] sm:text-xs font-bold text-orange-300">
-              KSh {displayPrice.toFixed(0)}
+              KSh {formatCurrency(displayPrice)}
             </span>
             {compareAtPrice != null && compareAtPrice > displayPrice && (
               <span className="text-[9px] text-white/80 line-through">
-                KSh {compareAtPrice.toFixed(0)}
+                KSh {formatCurrency(compareAtPrice)}
               </span>
             )}
           </div>

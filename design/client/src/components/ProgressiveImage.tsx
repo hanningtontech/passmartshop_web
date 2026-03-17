@@ -11,6 +11,9 @@ type ProgressiveImageProps = {
   alt: string;
   className?: string;
   loading?: "lazy" | "eager";
+  /** Optional native responsive image hints */
+  sizes?: string;
+  srcSet?: string;
   /** Optional wrapper class (e.g. for aspect ratio / overflow) */
   containerClassName?: string;
   /** Called when the full-quality image has loaded (e.g. to hide skeleton) */
@@ -27,6 +30,8 @@ export function ProgressiveImage({
   alt,
   className = "",
   loading = "lazy",
+  sizes,
+  srcSet,
   containerClassName = "",
   onLoad,
 }: ProgressiveImageProps) {
@@ -77,6 +82,8 @@ export function ProgressiveImage({
         )}
         <img
           src={src}
+          srcSet={srcSet}
+          sizes={sizes}
           alt={alt}
           loading={loading}
           decoding="async"

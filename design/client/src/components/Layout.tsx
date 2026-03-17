@@ -9,6 +9,7 @@ import {
   Mail,
   MapPin,
   MessageCircle,
+  User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
@@ -48,7 +49,7 @@ export default function Layout({ children }: LayoutProps) {
     const params = new URLSearchParams(searchString || "");
     return params.get("search") || "";
   });
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const { totalItems } = useCart();
   const { tags: productTags, loading: tagsLoading } = useProductTags();
   const { recordSearch, recentSearches } = useBehavior();
@@ -196,6 +197,13 @@ export default function Layout({ children }: LayoutProps) {
     loadCategories();
   }, []);
 
+  // Ensure each route load starts at the top (e.g. when navigating from buttons/links)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    }
+  }, [location]);
+
   useEffect(() => {
     function onScroll() {
       const currentY = window.scrollY || window.pageYOffset;
@@ -272,11 +280,8 @@ export default function Layout({ children }: LayoutProps) {
         Free delivery in Nairobi & Thika. Countrywide delivery available.
       </div>
 
-      {/* Header */}
-      <header
-        className={`sticky top-0 z-50 w-full bg-white shadow-sm print:hidden transform transition-transform duration-300 will-change-transform ${hideFeatures ? "-translate-y-full" : "translate-y-0"
-          }`}
-      >
+      {/* Header - scrolls with the page so nav links move out of view when scrolling down */}
+      <header className="w-full bg-white shadow-sm print:hidden">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between gap-4">
             {/* Left: categories menu button */}
@@ -343,6 +348,18 @@ export default function Layout({ children }: LayoutProps) {
                   className="hidden sm:inline-flex"
                 >
                   {user ? "My Account" : "Sign In"}
+                </Button>
+              </Link>
+              {/* Account (mobile icon) */}
+              <Link href="/account">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="inline-flex sm:hidden h-9 w-9 p-0"
+                  aria-label={user ? "My account" : "Sign in"}
+                >
+                  <User className="h-5 w-5" />
                 </Button>
               </Link>
               {/* Cart Icon */}

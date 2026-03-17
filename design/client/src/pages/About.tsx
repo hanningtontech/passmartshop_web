@@ -18,7 +18,7 @@ export default function About() {
       {/* Company Story */}
       <section className="py-16">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-12 items-start">
             <div>
               <h2 className="text-4xl font-bold mb-6">Who We Are</h2>
               <p className="text-gray-600 mb-4 leading-relaxed">
@@ -45,11 +45,11 @@ export default function About() {
                 warehouse to the home.
               </p>
             </div>
-            <div className="rounded-lg overflow-hidden border border-gray-200 bg-white">
+            <div className="rounded-lg overflow-hidden border border-gray-200 bg-white max-w-md mx-auto md:mx-0">
               <img
                 src="/about-who-we-are.png"
                 alt="Passmartshop customer support"
-                className="w-full h-96 object-cover"
+                className="w-full h-56 sm:h-72 md:h-96 object-cover"
                 loading="lazy"
               />
             </div>

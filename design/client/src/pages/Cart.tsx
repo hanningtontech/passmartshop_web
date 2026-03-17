@@ -4,6 +4,7 @@ import { Trash2, ShoppingBag, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
 import { TAX_RATE } from "@/config/checkout";
+import { formatCurrency } from "@/lib/imageUtils";
 
 export default function Cart() {
   const [, setLocation] = useLocation();
@@ -84,7 +85,7 @@ export default function Cart() {
                           </p>
                         )}
                         <p className="text-sm text-gray-600">
-                          KSh {price.toFixed(0)}
+                          KSh {formatCurrency(price)}
                         </p>
                       </div>
                     </div>
@@ -114,13 +115,13 @@ export default function Cart() {
 
                     {/* Price */}
                     <div className="col-span-2 text-right">
-                      KSh {price.toFixed(0)}
+                      KSh {formatCurrency(price)}
                     </div>
 
                     {/* Total & Remove */}
                     <div className="col-span-3 flex items-center justify-between">
                       <span className="font-semibold">
-                        KSh {itemTotal.toFixed(0)}
+                        KSh {formatCurrency(itemTotal)}
                       </span>
                       <button
                         onClick={() => removeFromCart(item.id, item.variantId)}
@@ -152,7 +153,7 @@ export default function Cart() {
               <div className="space-y-4 mb-6 pb-6 border-b">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Subtotal</span>
-                  <span className="font-semibold">KSh {totalPrice.toFixed(0)}</span>
+                  <span className="font-semibold">KSh {formatCurrency(totalPrice)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Shipping</span>
@@ -162,7 +163,7 @@ export default function Cart() {
                   <div className="flex justify-between">
                     <span className="text-gray-600">Tax</span>
                     <span className="font-semibold">
-                      KSh {(totalPrice * TAX_RATE).toFixed(0)}
+                      KSh {formatCurrency(totalPrice * TAX_RATE)}
                     </span>
                   </div>
                 )}
@@ -171,7 +172,7 @@ export default function Cart() {
               <div className="flex justify-between mb-6 text-xl font-bold">
                 <span>Total</span>
                 <span className="text-orange-600">
-                  KSh {(totalPrice * (1 + TAX_RATE)).toFixed(0)}
+                  KSh {formatCurrency(totalPrice * (1 + TAX_RATE))}
                 </span>
               </div>
 

@@ -7,6 +7,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { db } from "@/lib/firebase";
 import { collection, getDocs } from "firebase/firestore";
 import { FLASH_SALE_END_DATE, FLASH_SALE_TITLE } from "@/config/flashSale";
+import { ProgressiveImage } from "@/components/ProgressiveImage";
+import { buildSrcSet, getLowQualityImageUrl } from "@/lib/imageUtils";
 
 function useCountdown(endDate: Date) {
   const [left, setLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
@@ -175,17 +177,29 @@ export default function Home() {
                   }
                 >
                   <a className="group block rounded-xl overflow-hidden border border-slate-200 hover:border-orange-300 hover:shadow-sm transition">
-                    <div
-                      className="relative h-28"
-                      style={{
-                        backgroundImage: categoryImagesById[String(category.id)]
-                          ? `url('${categoryImagesById[String(category.id)]}')`
-                          : "linear-gradient(135deg, #fb923c 0%, #f97316 40%, #0f172a 100%)",
-                        backgroundSize: "cover",
-                        backgroundPosition: "center",
-                      }}
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/25 to-black/10" />
+                    <div className="relative h-28">
+                      {categoryImagesById[String(category.id)] ? (
+                        <>
+                          <ProgressiveImage
+                            src={categoryImagesById[String(category.id)]}
+                            placeholderSrc={getLowQualityImageUrl(
+                              categoryImagesById[String(category.id)]
+                            )}
+                            alt={category.name}
+                            loading="lazy"
+                            sizes="(min-width: 1024px) 200px, (min-width: 640px) 25vw, 50vw"
+                            srcSet={buildSrcSet(
+                              categoryImagesById[String(category.id)],
+                              [200, 320, 480, 640]
+                            )}
+                            containerClassName="absolute inset-0"
+                            className="object-cover"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/25 to-black/10" />
+                        </>
+                      ) : (
+                        <div className="absolute inset-0 bg-gradient-to-tr from-orange-400 via-orange-500 to-slate-900" />
+                      )}
                       <div className="absolute inset-0 p-3 flex flex-col justify-end">
                         <div className="text-white font-semibold leading-tight group-hover:text-orange-100 transition">
                           {category.name}
