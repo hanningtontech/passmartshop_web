@@ -322,7 +322,8 @@ export default function ProductDetail() {
   const displayRating = reviewCount > 0 ? averageRating : (product.rating ?? 0);
   const displayReviewCount = reviewCount > 0 ? reviewCount : (product.reviewCount ?? 0);
 
-  const images =
+  // Base product images (used when no variant images are available)
+  const baseProductImages =
     product.images?.length > 0
       ? product.images
       : product.imageUrls?.length > 0
@@ -330,6 +331,19 @@ export default function ProductDetail() {
       : product.primaryImageUrl
       ? [product.primaryImageUrl]
       : [];
+
+  const hasVariants =
+    (product.hasVariants === true) || (product.subProducts?.length ?? 0) > 0;
+
+  // When a variant is selected and it has its own images (from admin's variant images),
+  // prefer those for the gallery; otherwise fall back to product-level images.
+  const variantImages: string[] =
+    hasVariants && selectedVariant?.images?.length
+      ? (selectedVariant.images as string[]).filter(Boolean)
+      : [];
+
+  const images: string[] =
+    variantImages.length > 0 ? variantImages : baseProductImages;
   const imagesLowExplicit =
     product.imagesLow?.length > 0
       ? product.imagesLow
@@ -354,28 +368,10 @@ export default function ProductDetail() {
     setSelectedImageIndex((i) => (i + 1) % images.length);
   };
 
-  const hasVariants = (product.subProducts?.length ?? 0) > 0;
   const canAddToCart = !hasVariants || selectedVariant != null;
-
-  const getVariantPreferredImageIndex = (variant: any): number | null => {
-    if (!variant) return null;
-    const raw =
-      (variant.imageIndex ?? variant.imageNumber ?? variant.imageNo ?? variant.imageIdx) as any;
-    if (raw == null) return null;
-    const n = typeof raw === "number" ? raw : parseInt(String(raw), 10);
-    if (Number.isNaN(n)) return null;
-    if (n < 0 || n >= images.length) return null;
-    return n;
-  };
-
-  const getImagesForCart = (variant: any | null): string[] => {
-    const baseImages = Array.isArray(images) ? images.filter(Boolean) : [];
-    const idx = variant ? getVariantPreferredImageIndex(variant) : null;
-    if (idx == null) return baseImages;
-    const preferred = baseImages[idx];
-    if (!preferred) return baseImages;
-    return [preferred, ...baseImages.filter((u) => u !== preferred)];
-  };
+  const imagesForCart: string[] = Array.isArray(images)
+    ? images.filter(Boolean)
+    : [];
 
   const handleAddToCart = () => {
     if (hasVariants && !selectedVariant) {
@@ -389,7 +385,7 @@ export default function ProductDetail() {
         id: product.id,
         name: product.name,
         basePrice: String(basePrice),
-        images: getImagesForCart(selectedVariant),
+        images: imagesForCart,
         ...(selectedVariant && {
           variantId: selectedVariant.id,
           variantName: selectedVariant.name,
@@ -414,7 +410,7 @@ export default function ProductDetail() {
         id: product.id,
         name: product.name,
         basePrice: String(basePrice),
-        images: getImagesForCart(selectedVariant),
+        images: imagesForCart,
         ...(selectedVariant && {
           variantId: selectedVariant.id,
           variantName: selectedVariant.name,
@@ -539,17 +535,35 @@ export default function ProductDetail() {
           {/* Product Images */}
           <div className="w-full max-w-sm sm:max-w-md mx-auto md:mx-0">
             <div
-              className="bg-gray-100 rounded-lg overflow-hidden mb-4 flex items-center justify-center cursor-zoom-in"
+              className="bg-gray-100 rounded-lg overflow-hidden mb-4 relative cursor-zoom-in"
               onMouseMove={handleImageMouseMove}
               onMouseLeave={handleImageMouseLeave}
+              style={{ minHeight: "220px" }}
             >
               {displayImage ? (
-                <img
-                  src={displayImage}
-                  alt={product.name}
-                  loading="eager"
-                  className="w-full h-auto max-h-[360px] sm:max-h-[420px] md:max-h-[520px] object-contain"
-                />
+                <div
+                  className="absolute inset-0 w-full h-full transition-transform duration-75 ease-out"
+                  style={{
+                    transform: imageZoom.active ? "scale(2)" : "scale(1)",
+                    transformOrigin: `${imageZoom.originX}% ${imageZoom.originY}%`,
+                  }}
+                >
+                  <ProgressiveImage
+                    src={displayImage}
+                    placeholderSrc={displayImageLow}
+                    alt={product.name}
+                    loading="eager"
+                    /* Product gallery image: cap width on desktop, full width on mobile */
+                    sizes="(min-width: 1024px) 480px, (min-width: 640px) 80vw, 100vw"
+                    srcSet={
+                      displayImage
+                        ? buildSrcSet(displayImage, [320, 480, 640, 800, 960, 1200])
+                        : undefined
+                    }
+                    containerClassName="absolute inset-0 h-full w-full"
+                    className="object-contain"
+                  />
+                </div>
               ) : (
                 <div className="w-full h-64 flex items-center justify-center text-gray-400">
                   No image available
@@ -615,7 +629,7 @@ export default function ProductDetail() {
 
           {/* Product Info */}
           <div>
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-3 sm:mb-4">
+            <h1 className="text-[14px] sm:text-xl md:text-2xl font-bold mb-2 sm:mb-3">
               {product.name}
             </h1>
 
@@ -641,17 +655,17 @@ export default function ProductDetail() {
             )}
 
             {/* Price */}
-            <div className="flex flex-wrap items-baseline gap-3 mb-4 sm:mb-6">
-              <span className="text-2xl sm:text-3xl md:text-4xl font-bold text-orange-600">
+            <div className="flex flex-wrap items-baseline gap-2 mb-3 sm:mb-5">
+              <span className="text-[12px] sm:text-2xl md:text-3xl font-bold text-orange-600">
                 KSh {formatCurrency(basePrice)}
               </span>
               {originalPrice != null && (
-                <span className="text-lg sm:text-xl md:text-2xl text-gray-500 line-through">
+                <span className="text-base sm:text-lg md:text-xl text-gray-500 line-through">
                   KSh {formatCurrency(originalPrice)}
                 </span>
               )}
               {discount > 0 && (
-                <span className="bg-red-500 text-white px-2 sm:px-3 py-0.5 sm:py-1 rounded-lg text-xs sm:text-sm font-semibold">
+                <span className="bg-red-500 text-white px-2 sm:px-3 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-sm font-semibold">
                   Save {discount}%
                 </span>
               )}
@@ -681,7 +695,7 @@ export default function ProductDetail() {
                 <h3 className="font-semibold mb-2 text-sm">Choose variant</h3>
                 <p className="text-xs text-gray-600 mb-2">Select a variant to add to cart.</p>
                 <div className="flex flex-wrap gap-1.5">
-                  {product.subProducts.map((sp: { id: string; name: string; sku?: string; price?: number; stockCount?: string; stockQuantity?: number }) => {
+                  {product.subProducts.map((sp: { id: string; name: string; sku?: string; price?: number; stockCount?: string; stockQuantity?: number; images?: string[] }) => {
                     const isSelected = selectedVariant?.id === sp.id;
                     const stockNum =
                       typeof sp.stockQuantity === "number"
@@ -696,8 +710,8 @@ export default function ProductDetail() {
                         type="button"
                         onClick={() => {
                           setSelectedVariant(sp);
-                          const idx = getVariantPreferredImageIndex(sp);
-                          if (idx != null) setSelectedImageIndex(idx);
+                          // When changing variant, reset gallery to first image for that variant.
+                          setSelectedImageIndex(0);
                         }}
                         className={`px-3 py-2 rounded-md border text-left transition text-xs ${
                           isSelected
@@ -731,7 +745,7 @@ export default function ProductDetail() {
 
             {/* Quantity – capped by available stock (and already in cart) */}
             <div className="mb-6">
-              <h3 className="font-semibold mb-2 text-sm sm:text-base">Quantity</h3>
+              <h3 className="font-semibold mb-2 text-[12px] sm:text-base">Quantity</h3>
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
@@ -886,25 +900,25 @@ export default function ProductDetail() {
             </div>
 
             {/* Shipping & delivery info panel */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-slate-50 rounded-lg border border-slate-200 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-3 sm:p-4 bg-slate-50 rounded-lg border border-slate-200 mb-8">
               <div className="flex items-start gap-3">
                 <Truck className="h-5 w-5 text-orange-500 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-medium text-gray-900 text-sm">Fast Delivery</p>
+                  <p className="font-medium text-gray-900 text-[12px] sm:text-sm">Fast Delivery</p>
                   <p className="text-gray-600 text-xs">Delivered within 2–5 business days</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
                 <ShieldCheck className="h-5 w-5 text-orange-500 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-medium text-gray-900 text-sm">Secure Payment</p>
+                  <p className="font-medium text-gray-900 text-[12px] sm:text-sm">Secure Payment</p>
                   <p className="text-gray-600 text-xs">Pay via M-Pesa, Card, or Cash on Delivery</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
                 <RotateCcw className="h-5 w-5 text-orange-500 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-medium text-gray-900 text-sm">Easy Returns</p>
+                  <p className="font-medium text-gray-900 text-[12px] sm:text-sm">Easy Returns</p>
                   <p className="text-gray-600 text-xs">30-day return policy</p>
                 </div>
               </div>

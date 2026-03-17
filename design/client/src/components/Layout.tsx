@@ -57,6 +57,7 @@ export default function Layout({ children }: LayoutProps) {
   const [productPageTagsLoading, setProductPageTagsLoading] = useState(false);
   const [productPageTags, setProductPageTags] = useState<string[]>([]);
   const { user } = useAuth();
+  const [signupPromptDismissed, setSignupPromptDismissed] = useState(false);
   const lastScrollY = useRef(0);
   const ticking = useRef(false);
   const hideRef = useRef(false);
@@ -590,7 +591,35 @@ export default function Layout({ children }: LayoutProps) {
 
       {/* Main Content */}
       <UiProvider value={{ hideFeatures }}>
-        <main className="flex-1">{children}</main>
+        <main className="flex-1">
+          {/* Lightweight, repeated sign-up prompt for guests */}
+          {!user && !signupPromptDismissed && (
+            <div className="bg-orange-50 border-b border-orange-100 py-3">
+              <div className="container mx-auto px-4 flex items-center justify-between gap-3">
+                <div className="text-xs sm:text-sm text-orange-900">
+                  <span className="font-semibold">Create a free Passmartshop account</span>{" "}
+                  to track orders faster and save your details for next time.
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Link href="/account">
+                    <Button size="sm" className="h-8 px-3 bg-orange-500 hover:bg-orange-600 text-white text-xs sm:text-sm">
+                      Sign up
+                    </Button>
+                  </Link>
+                  <button
+                    type="button"
+                    className="text-orange-700/70 hover:text-orange-900 text-xs"
+                    onClick={() => setSignupPromptDismissed(true)}
+                  >
+                    Later
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {children}
+        </main>
       </UiProvider>
 
       {/* Footer */}
@@ -667,13 +696,23 @@ export default function Layout({ children }: LayoutProps) {
                 <div className="flex items-start gap-2">
                   <Phone className="h-5 w-5 text-orange-500 mt-1 flex-shrink-0" />
                   <div>
-                    <p>0740730781</p>
+                    <a
+                      href="tel:0740730781"
+                      className="hover:text-orange-400 transition"
+                    >
+                      0740730781
+                    </a>
                   </div>
                 </div>
                 <div className="flex items-start gap-2">
                   <Mail className="h-5 w-5 text-orange-500 mt-1 flex-shrink-0" />
                   <div>
-                    <p>support@passmartshop.com</p>
+                    <a
+                      href="mailto:support@passmartshop.com"
+                      className="hover:text-orange-400 transition break-all"
+                    >
+                      support@passmartshop.com
+                    </a>
                   </div>
                 </div>
                 <div className="flex items-start gap-2">

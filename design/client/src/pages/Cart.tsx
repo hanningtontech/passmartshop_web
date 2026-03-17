@@ -45,8 +45,8 @@ export default function Cart() {
           {/* Cart Items */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-              {/* Header */}
-              <div className="grid grid-cols-12 gap-4 p-6 bg-gray-50 border-b font-semibold">
+              {/* Header (desktop/tablet only) */}
+              <div className="hidden md:grid grid-cols-12 gap-4 p-6 bg-gray-50 border-b font-semibold text-sm">
                 <div className="col-span-5">Product</div>
                 <div className="col-span-2 text-center">Quantity</div>
                 <div className="col-span-2 text-right">Price</div>
@@ -61,10 +61,10 @@ export default function Cart() {
                 return (
                   <div
                     key={item.id}
-                    className="grid grid-cols-12 gap-4 p-6 border-b items-center hover:bg-gray-50 transition"
+                    className="grid grid-cols-1 md:grid-cols-12 gap-4 p-4 md:p-6 border-b items-start md:items-center hover:bg-gray-50 transition"
                   >
                     {/* Product */}
-                    <div className="col-span-5 flex gap-4">
+                    <div className="md:col-span-5 flex gap-3">
                       {item.images && item.images.length > 0 ? (
                         <img
                           src={item.images[0]}
@@ -74,8 +74,8 @@ export default function Cart() {
                       ) : (
                         <div className="w-20 h-20 bg-gray-200 rounded-lg" />
                       )}
-                      <div>
-                        <h3 className="font-semibold line-clamp-2">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold line-clamp-2 text-sm">
                           {item.name}
                         </h3>
                         {(item.variantName != null && item.variantName !== "") && (
@@ -84,15 +84,15 @@ export default function Cart() {
                             {item.variantSku ? ` · ${item.variantSku}` : ""}
                           </p>
                         )}
-                        <p className="text-sm text-gray-600">
+                        <p className="hidden md:block text-sm text-gray-600">
                           KSh {formatCurrency(price)}
                         </p>
                       </div>
                     </div>
 
-                    {/* Quantity */}
-                    <div className="col-span-2">
-                      <div className="flex items-center justify-center gap-2 border border-gray-300 rounded-lg w-fit mx-auto">
+                    {/* Quantity (desktop) */}
+                    <div className="hidden md:block md:col-span-2">
+                      <div className="flex items-center justify-center gap-2 border border-gray-300 rounded-lg w-fit mx-auto text-sm">
                         <button
                           onClick={() =>
                             updateQuantity(item.id, item.quantity - 1, item.variantId)
@@ -113,14 +113,14 @@ export default function Cart() {
                       </div>
                     </div>
 
-                    {/* Price */}
-                    <div className="col-span-2 text-right">
+                    {/* Price (desktop) */}
+                    <div className="hidden md:block md:col-span-2 text-right text-sm">
                       KSh {formatCurrency(price)}
                     </div>
 
-                    {/* Total & Remove */}
-                    <div className="col-span-3 flex items-center justify-between">
-                      <span className="font-semibold">
+                    {/* Total & Remove (desktop) */}
+                    <div className="hidden md:flex md:col-span-3 items-center justify-between">
+                      <span className="font-semibold text-sm">
                         KSh {formatCurrency(itemTotal)}
                       </span>
                       <button
@@ -129,6 +129,45 @@ export default function Cart() {
                       >
                         <Trash2 className="h-5 w-5" />
                       </button>
+                    </div>
+
+                    {/* Compact controls & totals for mobile */}
+                    <div className="flex md:hidden flex-col gap-2 col-span-1">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 border border-gray-300 rounded-lg w-fit text-xs px-2 py-1">
+                          <button
+                            onClick={() =>
+                              updateQuantity(item.id, item.quantity - 1, item.variantId)
+                            }
+                            className="px-2 py-1 hover:bg-gray-100"
+                          >
+                            −
+                          </button>
+                          <span className="px-2">{item.quantity}</span>
+                          <button
+                            onClick={() =>
+                              updateQuantity(item.id, item.quantity + 1, item.variantId)
+                            }
+                            className="px-2 py-1 hover:bg-gray-100"
+                          >
+                            +
+                          </button>
+                        </div>
+                        <button
+                          onClick={() => removeFromCart(item.id, item.variantId)}
+                          className="text-red-500 hover:text-red-700 transition ml-2"
+                        >
+                          <Trash2 className="h-5 w-5" />
+                        </button>
+                      </div>
+                      <div className="flex items-baseline justify-between text-xs">
+                        <span className="text-gray-600">
+                          Price: <span className="font-semibold">KSh {formatCurrency(price)}</span>
+                        </span>
+                        <span className="text-gray-900 font-semibold">
+                          Total: KSh {formatCurrency(itemTotal)}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 );
