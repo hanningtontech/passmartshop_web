@@ -104,6 +104,9 @@ jspm_packages/
 tmp/
 temp/
 
+# Firebase
+.firebase/
+
 # Database
 *.db
 *.sqlite
