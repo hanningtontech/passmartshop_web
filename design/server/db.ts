@@ -279,12 +279,35 @@ export async function createOrder(orderData: {
     });
     orderId = result[0].insertId;
   } catch (err: unknown) {
+    // Log full error and relevant parameters to aid debugging in production logs
+    try {
+      console.error("[Database] createOrder initial insert failed", {
+        error: err,
+        params: baseValues,
+        paymentMethod: orderData.paymentMethod,
+        mpesaTransactionCode: orderData.mpesaTransactionCode,
+        paymentStatus: orderData.paymentStatus,
+        items: orderData.items,
+      });
+    } catch (logErr) {
+      console.error("[Database] Failed to log createOrder error", logErr);
+    }
+
     const msg = err instanceof Error ? err.message : String(err);
     const isUnknownColumnOrEnum =
       /Unknown column|paymentStatus|paymentMethod|mpesaTransactionCode|invalid.*enum/i.test(msg);
     if (isUnknownColumnOrEnum) {
-      const result = await db.insert(orders).values(baseValues);
-      orderId = result[0].insertId;
+      try {
+        const result = await db.insert(orders).values(baseValues);
+        orderId = result[0].insertId;
+      } catch (err2: unknown) {
+        // Log the fallback insert error as well and rethrow so caller sees the failure
+        console.error("[Database] createOrder fallback insert failed", {
+          error: err2,
+          params: baseValues,
+        });
+        throw err2;
+      }
     } else {
       throw err;
     }
