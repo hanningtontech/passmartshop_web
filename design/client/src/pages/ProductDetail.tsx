@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useRoute, useLocation } from "wouter";
-import { ShoppingCart, Heart, ChevronRight, Star, Truck, ShieldCheck, RotateCcw } from "lucide-react";
+import { ShoppingCart, Heart, ChevronLeft, ChevronRight, Star, Truck, ShieldCheck, RotateCcw, MessageCircle } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -8,6 +8,7 @@ import { ProgressiveImage } from "@/components/ProgressiveImage";
 import { getLowQualityImageUrl } from "@/lib/imageUtils";
 import { useCart } from "@/contexts/CartContext";
 import { useBehavior } from "@/contexts/BehaviorContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { db } from "@/lib/firebase";
 import {
@@ -34,6 +35,7 @@ export default function ProductDetail() {
   const [, setLocation] = useLocation();
   const { addToCart, items: cartItems } = useCart();
   const { recordProductView, getViewedCategoryIds } = useBehavior();
+  const { user, profile } = useAuth();
   const [quantity, setQuantity] = useState(1);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -56,6 +58,9 @@ export default function ProductDetail() {
   } | null>(null);
 
   const productId = params?.id ?? null;
+
+  const [activeTab, setActiveTab] = useState<"description" | "specifications" | "reviews">("description");
+  const reviewsRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setSelectedVariant(null);
@@ -121,60 +126,57 @@ export default function ProductDetail() {
     return () => { cancelled = true; };
   }, [product?.categoryId]);
 
-  // Fetch related products for "You May Also Like" – same category, or from user's viewed categories
+  // Fetch related products for "You May Also Like"
+  // Primary signal: overlapping tags with this product.
+  // Fallback: same category when tags are missing.
   useEffect(() => {
     if (!product?.id) {
       setRelatedProducts([]);
       return;
     }
-    const viewedCategoryIds = getViewedCategoryIds();
-    const categoryIdsToUse =
-      viewedCategoryIds.length > 0
-        ? [product.categoryId, ...viewedCategoryIds].filter(Boolean).filter((id, i, arr) => arr.indexOf(id) === i).slice(0, 10)
-        : product.categoryId
-          ? [product.categoryId]
-          : [];
+    const productTags: string[] = Array.isArray(product.tags)
+      ? (product.tags as string[]).map((t) => String(t).toLowerCase())
+      : [];
+    const hasTags = productTags.length > 0;
 
-    if (categoryIdsToUse.length === 0) {
-      setRelatedProducts([]);
-      return;
-    }
-
-    if (categoryIdsToUse.length === 1) {
-      getDocs(
-        query(
+    // Fetch a small pool of candidates: same category first.
+    const q = product.categoryId
+      ? query(
           collection(db, "products"),
-          where("categoryId", "==", categoryIdsToUse[0]),
-          limit(9)
+          where("categoryId", "==", product.categoryId),
+          limit(30)
         )
-      )
-        .then((snap) => {
-          const list = snap.docs
-            .map((d) => ({ id: d.id, ...d.data() }))
-            .filter((p: any) => String(p.id) !== String(product.id))
-            .slice(0, 8);
-          setRelatedProducts(list);
-        })
-        .catch(() => setRelatedProducts([]));
-      return;
-    }
+      : query(collection(db, "products"), limit(30));
 
-    getDocs(
-      query(
-        collection(db, "products"),
-        where("categoryId", "in", categoryIdsToUse),
-        limit(20)
-      )
-    )
+    getDocs(q)
       .then((snap) => {
-        const list = snap.docs
+        const all = snap.docs
           .map((d) => ({ id: d.id, ...d.data() }))
           .filter((p: any) => String(p.id) !== String(product.id));
-        const shuffled = [...list].sort(() => Math.random() - 0.5);
-        setRelatedProducts(shuffled.slice(0, 8));
+
+        let scored: Array<{ p: any; score: number }> = [];
+        if (hasTags) {
+          for (const p of all) {
+            const tags: string[] = Array.isArray(p.tags)
+              ? (p.tags as string[]).map((t) => String(t).toLowerCase())
+              : [];
+            const overlap = tags.filter((t) => productTags.includes(t));
+            if (overlap.length === 0) continue;
+            scored.push({ p, score: overlap.length });
+          }
+          // If no tag matches, fall back to category-based list
+          if (scored.length === 0) {
+            scored = all.map((p) => ({ p, score: 1 }));
+          }
+        } else {
+          scored = all.map((p) => ({ p, score: 1 }));
+        }
+
+        scored.sort((a, b) => b.score - a.score);
+        setRelatedProducts(scored.slice(0, 8).map((s) => s.p));
       })
       .catch(() => setRelatedProducts([]));
-  }, [product?.id, product?.categoryId, getViewedCategoryIds]);
+  }, [product?.id, product?.categoryId, product?.tags, getViewedCategoryIds]);
 
   // Fetch reviews for this product (Firestore `reviews` collection)
   useEffect(() => {
@@ -186,13 +188,17 @@ export default function ProductDetail() {
     getDocs(query(collection(db, "reviews"), where("productId", "==", productId)))
       .then((snap) => {
         const list = snap.docs.map((d) => {
-          const data = d.data();
+          const data = d.data() as any;
+          const authorName =
+            (data.username as string | undefined) ??
+            (data.authorName as string | undefined) ??
+            "Anonymous";
           return {
             id: d.id,
             productId: data.productId ?? "",
             rating: typeof data.rating === "number" ? data.rating : 0,
             comment: data.comment ?? "",
-            authorName: data.authorName ?? "Anonymous",
+            authorName,
             createdAt: data.createdAt,
           };
         });
@@ -327,9 +333,38 @@ export default function ProductDetail() {
     (displayImage ? getLowQualityImageUrl(displayImage) : null);
   const getImageLow = (img: string, idx: number) =>
     imagesLowExplicit[idx] ?? getLowQualityImageUrl(img);
+  const hasMultipleImages = images.length > 1;
+  const goPrevImage = () => {
+    if (!hasMultipleImages) return;
+    setSelectedImageIndex((i) => (i - 1 + images.length) % images.length);
+  };
+  const goNextImage = () => {
+    if (!hasMultipleImages) return;
+    setSelectedImageIndex((i) => (i + 1) % images.length);
+  };
 
   const hasVariants = (product.subProducts?.length ?? 0) > 0;
   const canAddToCart = !hasVariants || selectedVariant != null;
+
+  const getVariantPreferredImageIndex = (variant: any): number | null => {
+    if (!variant) return null;
+    const raw =
+      (variant.imageIndex ?? variant.imageNumber ?? variant.imageNo ?? variant.imageIdx) as any;
+    if (raw == null) return null;
+    const n = typeof raw === "number" ? raw : parseInt(String(raw), 10);
+    if (Number.isNaN(n)) return null;
+    if (n < 0 || n >= images.length) return null;
+    return n;
+  };
+
+  const getImagesForCart = (variant: any | null): string[] => {
+    const baseImages = Array.isArray(images) ? images.filter(Boolean) : [];
+    const idx = variant ? getVariantPreferredImageIndex(variant) : null;
+    if (idx == null) return baseImages;
+    const preferred = baseImages[idx];
+    if (!preferred) return baseImages;
+    return [preferred, ...baseImages.filter((u) => u !== preferred)];
+  };
 
   const handleAddToCart = () => {
     if (hasVariants && !selectedVariant) {
@@ -343,7 +378,7 @@ export default function ProductDetail() {
         id: product.id,
         name: product.name,
         basePrice: String(basePrice),
-        images,
+        images: getImagesForCart(selectedVariant),
         ...(selectedVariant && {
           variantId: selectedVariant.id,
           variantName: selectedVariant.name,
@@ -368,7 +403,7 @@ export default function ProductDetail() {
         id: product.id,
         name: product.name,
         basePrice: String(basePrice),
-        images,
+        images: getImagesForCart(selectedVariant),
         ...(selectedVariant && {
           variantId: selectedVariant.id,
           variantName: selectedVariant.name,
@@ -383,20 +418,32 @@ export default function ProductDetail() {
   const handleSubmitReview = async () => {
     if (!productId || reviewSubmitting) return;
     const rating = Math.min(5, Math.max(1, Math.round(reviewForm.rating)));
-    const authorName =
-      reviewForm.postAnonymously || !reviewForm.displayName.trim()
-        ? "Anonymous"
-        : reviewForm.displayName.trim();
+    const trimmedName = reviewForm.displayName.trim();
+    const resolvedNameFromForm = trimmedName || profile?.username || profile?.displayName || "";
+    const shouldBeAnonymous = reviewForm.postAnonymously || !resolvedNameFromForm;
+    const username =
+      !shouldBeAnonymous && profile?.username
+        ? profile.username
+        : !shouldBeAnonymous && trimmedName
+        ? trimmedName
+        : undefined;
+    const authorName = shouldBeAnonymous
+      ? "Anonymous"
+      : username ?? "Anonymous";
     setReviewSubmitting(true);
     try {
+      // 1) Save the review (this is the primary action)
       await addDoc(collection(db, "reviews"), {
         productId,
         rating,
         comment: (reviewForm.comment ?? "").trim().slice(0, 2000),
         authorName,
-        userId: null,
+        username: username ?? null,
+        userId: user?.uid ?? null,
         createdAt: serverTimestamp(),
       });
+
+      // 2) Refresh local reviews list
       const snap = await getDocs(
         query(collection(db, "reviews"), where("productId", "==", productId))
       );
@@ -414,10 +461,17 @@ export default function ProductDetail() {
       });
       const count = list.length;
       const avg = count > 0 ? list.reduce((s, r) => s + r.rating, 0) / count : 0;
-      await updateDoc(doc(db, "products", productId), {
-        rating: Math.round(avg * 10) / 10,
-        reviewCount: count,
-      });
+
+      // 3) Best-effort: update product aggregates. This often requires elevated permissions,
+      // so it must not block the user from submitting a review.
+      try {
+        await updateDoc(doc(db, "products", productId), {
+          rating: Math.round(avg * 10) / 10,
+          reviewCount: count,
+        });
+      } catch (e) {
+        console.warn("[Reviews] Saved review, but could not update product aggregates:", e);
+      }
       setReviews(
         list.map((r) => ({
           id: r.id,
@@ -433,8 +487,12 @@ export default function ProductDetail() {
       );
       setReviewForm({ rating: 5, comment: "", displayName: "", postAnonymously: true });
       toast.success("Review submitted. Thank you!");
-    } catch (e) {
-      toast.error("Could not submit review. Please try again.");
+    } catch (e: any) {
+      const msg =
+        typeof e?.message === "string" && e.message.length > 0
+          ? e.message
+          : "Could not submit review. Please try again.";
+      toast.error(msg);
     } finally {
       setReviewSubmitting(false);
     }
@@ -495,16 +553,46 @@ export default function ProductDetail() {
                   No image available
                 </div>
               )}
+
+              {/* Prev/Next controls */}
+              {hasMultipleImages && (
+                <>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      goPrevImage();
+                    }}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white/90 hover:bg-white shadow flex items-center justify-center transition"
+                    aria-label="Previous image"
+                  >
+                    <ChevronLeft className="h-5 w-5 text-gray-800" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      goNextImage();
+                    }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white/90 hover:bg-white shadow flex items-center justify-center transition"
+                    aria-label="Next image"
+                  >
+                    <ChevronRight className="h-5 w-5 text-gray-800" />
+                  </button>
+                </>
+              )}
             </div>
 
             {/* Thumbnail Gallery */}
-            {images.length > 1 && (
-              <div className="flex gap-2 mt-2">
+            {hasMultipleImages && (
+              <div className="grid grid-cols-5 sm:grid-cols-6 gap-2 mt-2">
                 {images.map((img, idx) => (
                   <button
                     key={idx}
                     onClick={() => setSelectedImageIndex(idx)}
-                    className={`w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden border-2 flex-shrink-0 ${
+                    className={`aspect-square w-full rounded-lg overflow-hidden border-2 ${
                       selectedImageIndex === idx
                         ? "border-orange-500"
                         : "border-gray-300"
@@ -585,10 +673,10 @@ export default function ProductDetail() {
 
             {/* Variants (subProducts) – user must select one before adding to cart */}
             {product.subProducts?.length > 0 && (
-              <div className="mb-8">
-                <h3 className="font-semibold mb-3">Choose variant</h3>
-                <p className="text-sm text-gray-600 mb-3">Select a variant to add to cart.</p>
-                <div className="flex flex-wrap gap-2">
+              <div className="mb-6">
+                <h3 className="font-semibold mb-2 text-sm">Choose variant</h3>
+                <p className="text-xs text-gray-600 mb-2">Select a variant to add to cart.</p>
+                <div className="flex flex-wrap gap-1.5">
                   {product.subProducts.map((sp: { id: string; name: string; sku?: string; price?: number; stockCount?: string; stockQuantity?: number }) => {
                     const isSelected = selectedVariant?.id === sp.id;
                     const stockNum =
@@ -602,21 +690,25 @@ export default function ProductDetail() {
                       <button
                         key={sp.id}
                         type="button"
-                        onClick={() => setSelectedVariant(sp)}
-                        className={`px-4 py-3 rounded-lg border-2 text-left transition ${
+                        onClick={() => {
+                          setSelectedVariant(sp);
+                          const idx = getVariantPreferredImageIndex(sp);
+                          if (idx != null) setSelectedImageIndex(idx);
+                        }}
+                        className={`px-3 py-2 rounded-md border text-left transition text-xs ${
                           isSelected
                             ? "border-orange-500 bg-orange-50 text-orange-900"
                             : "border-gray-200 bg-white hover:border-orange-300 text-gray-800"
                         } ${!inStock ? "opacity-60 cursor-not-allowed" : ""}`}
                         disabled={!inStock}
                       >
-                        <span className="font-medium block">{sp.name}</span>
-                        {sp.sku && <span className="text-xs text-gray-500 block">{sp.sku}</span>}
-                        <span className="text-sm font-semibold text-orange-600 block mt-0.5">
+                        <span className="font-medium block truncate">{sp.name}</span>
+                        {sp.sku && <span className="text-[10px] text-gray-500 block truncate">{sp.sku}</span>}
+                        <span className="text-xs font-semibold text-orange-600 block mt-0.5">
                           {typeof sp.price === "number" ? `KSh ${sp.price.toFixed(0)}` : "—"}
                         </span>
                         {stockNum !== null && (
-                          <span className="text-xs text-gray-500">
+                          <span className="text-[10px] text-gray-500">
                             {inStock ? `${stockNum} in stock` : "Out of stock"}
                           </span>
                         )}
@@ -625,7 +717,7 @@ export default function ProductDetail() {
                   })}
                 </div>
                 {selectedVariant && (
-                  <p className="text-sm text-green-600 font-medium mt-2">
+                  <p className="text-xs text-green-600 font-medium mt-2">
                     Selected: {selectedVariant.name}
                     {selectedVariant.sku ? ` (${selectedVariant.sku})` : ""}
                   </p>
@@ -675,7 +767,7 @@ export default function ProductDetail() {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex flex-wrap gap-4 mb-6">
+            <div className="flex flex-wrap gap-4 mb-4">
               <Button
                 size="lg"
                 className="flex-1 min-w-[140px] bg-orange-500 hover:bg-orange-600 text-white"
@@ -707,6 +799,58 @@ export default function ProductDetail() {
               </Button>
             </div>
 
+            {/* WhatsApp order button + rating summary */}
+            <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <Button
+                type="button"
+                className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-2"
+                onClick={() => {
+                  const qty = Math.max(1, quantity);
+                  const message = `Hi, I'm interested in this product:%0A- Name: ${encodeURIComponent(
+                    product.name
+                  )}%0A- Price: KSh ${basePrice.toFixed(
+                    0
+                  )}%0A- Quantity: ${qty}%0A%0APlease assist with my order.`;
+                  window.open(`https://wa.me/254740730781?text=${message}`, "_blank");
+                }}
+              >
+                <MessageCircle className="h-5 w-5" />
+                Order on WhatsApp
+              </Button>
+
+              {(displayRating > 0 || displayReviewCount > 0) && (
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 text-sm text-gray-700 hover:text-orange-600 transition"
+                  onClick={() => {
+                    setActiveTab("reviews");
+                    setTimeout(() => {
+                      reviewsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }, 50);
+                  }}
+                >
+                  <div className="flex text-yellow-400">
+                    {[...Array(5)].map((_, i) => (
+                      <Star
+                        key={i}
+                        className={`h-4 w-4 ${
+                          i < Math.round(Number(displayRating) || 0)
+                            ? "fill-yellow-400"
+                            : "text-gray-300"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <span className="font-semibold">
+                    {displayRating.toFixed(1)}
+                    <span className="ml-1 text-xs text-gray-500">
+                      ({displayReviewCount} {displayReviewCount === 1 ? "rating" : "ratings"})
+                    </span>
+                  </span>
+                </button>
+              )}
+            </div>
+
             {/* Shipping & delivery info panel */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-slate-50 rounded-lg border border-slate-200 mb-8">
               <div className="flex items-start gap-3">
@@ -731,196 +875,198 @@ export default function ProductDetail() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
 
-            {/* Tabbed: Description, Specifications, Reviews */}
-            <Tabs defaultValue="description" className="mb-8">
-              <TabsList className="border-b border-gray-200 w-full justify-start rounded-none bg-transparent p-0 gap-6">
-                <TabsTrigger
-                  value="description"
-                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-orange-500 data-[state=active]:text-orange-600"
-                >
-                  Description
-                </TabsTrigger>
-                <TabsTrigger
-                  value="specifications"
-                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-orange-500 data-[state=active]:text-orange-600"
-                >
-                  Specifications
-                </TabsTrigger>
-                <TabsTrigger
-                  value="reviews"
-                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-orange-500 data-[state=active]:text-orange-600"
-                >
-                  Reviews
-                </TabsTrigger>
-              </TabsList>
-              <TabsContent value="description" className="mt-4">
-                {product.description ? (
-                  <div className="prose prose-gray max-w-none text-gray-600 prose-headings:font-semibold prose-p:leading-relaxed prose-ul:my-2 prose-li:my-0">
-                    <ReactMarkdown>{product.description}</ReactMarkdown>
-                  </div>
-                ) : product.shortDescription ? (
-                  <p className="text-gray-600 leading-relaxed">{product.shortDescription}</p>
-                ) : (
-                  <p className="text-gray-600">No description available.</p>
-                )}
-              </TabsContent>
-              <TabsContent value="specifications" className="mt-4">
-                {product.specifications && Object.keys(product.specifications).length > 0 ? (
-                  <div className="border border-gray-200 rounded-lg overflow-hidden">
-                    <table className="w-full text-sm">
-                      <tbody className="divide-y divide-gray-200">
-                        {Object.entries(product.specifications).map(([key, value]) => (
-                          <tr key={key} className="bg-white">
-                            <td className="px-4 py-3 font-medium text-gray-700 w-1/3">{key}</td>
-                            <td className="px-4 py-3 text-gray-600">{value}</td>
-                          </tr>
+        {/* Description / Specifications / Reviews (full width) */}
+        <div className="max-w-5xl mx-auto mt-10">
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)} className="mb-8">
+            <TabsList className="border-b border-gray-200 w-full justify-start rounded-none bg-transparent p-0 gap-6">
+              <TabsTrigger
+                value="description"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-orange-500 data-[state=active]:text-orange-600"
+              >
+                Description
+              </TabsTrigger>
+              <TabsTrigger
+                value="specifications"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-orange-500 data-[state=active]:text-orange-600"
+              >
+                Specifications
+              </TabsTrigger>
+              <TabsTrigger
+                value="reviews"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-orange-500 data-[state=active]:text-orange-600"
+              >
+                Reviews
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="description" className="mt-4">
+              {product.description ? (
+                <div className="prose prose-gray max-w-none text-gray-600 prose-headings:font-semibold prose-p:leading-relaxed prose-ul:my-2 prose-li:my-0">
+                  <ReactMarkdown>{product.description}</ReactMarkdown>
+                </div>
+              ) : product.shortDescription ? (
+                <p className="text-gray-600 leading-relaxed">{product.shortDescription}</p>
+              ) : (
+                <p className="text-gray-600">No description available.</p>
+              )}
+            </TabsContent>
+            <TabsContent value="specifications" className="mt-4">
+              {product.specifications && Object.keys(product.specifications).length > 0 ? (
+                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  <table className="w-full text-sm">
+                    <tbody className="divide-y divide-gray-200">
+                      {Object.entries(product.specifications).map(([key, value]) => (
+                        <tr key={key} className="bg-white">
+                          <td className="px-4 py-3 font-medium text-gray-700 w-1/3">{key}</td>
+                          <td className="px-4 py-3 text-gray-600">{value}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-gray-600">No specifications available.</p>
+              )}
+            </TabsContent>
+            <TabsContent value="reviews" className="mt-4">
+              <div ref={reviewsRef} className="space-y-8">
+                {/* Write a review */}
+                <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                  <h4 className="font-semibold text-gray-900 mb-4">Write a review</h4>
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="text-gray-700">Rating</Label>
+                      <div className="flex gap-1 mt-1">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            key={star}
+                            type="button"
+                            onClick={() =>
+                              setReviewForm((f) => ({ ...f, rating: star }))
+                            }
+                            className="p-0.5 focus:outline-none focus:ring-2 focus:ring-orange-500 rounded"
+                            aria-label={`${star} star${star > 1 ? "s" : ""}`}
+                          >
+                            <Star
+                              className={`h-8 w-8 ${
+                                star <= reviewForm.rating
+                                  ? "fill-yellow-400 text-yellow-400"
+                                  : "text-gray-300"
+                              }`}
+                            />
+                          </button>
                         ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <p className="text-gray-600">No specifications available.</p>
-                )}
-              </TabsContent>
-              <TabsContent value="reviews" className="mt-4">
-                <div className="space-y-8">
-                  {/* Write a review */}
-                  <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
-                    <h4 className="font-semibold text-gray-900 mb-4">Write a review</h4>
-                    <div className="space-y-4">
-                      <div>
-                        <Label className="text-gray-700">Rating</Label>
-                        <div className="flex gap-1 mt-1">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <button
-                              key={star}
-                              type="button"
-                              onClick={() =>
-                                setReviewForm((f) => ({ ...f, rating: star }))
-                              }
-                              className="p-0.5 focus:outline-none focus:ring-2 focus:ring-orange-500 rounded"
-                              aria-label={`${star} star${star > 1 ? "s" : ""}`}
-                            >
-                              <Star
-                                className={`h-8 w-8 ${
-                                  star <= reviewForm.rating
-                                    ? "fill-yellow-400 text-yellow-400"
-                                    : "text-gray-300"
-                                }`}
-                              />
-                            </button>
-                          ))}
-                        </div>
                       </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="review-comment" className="text-gray-700">
+                        Comment (optional)
+                      </Label>
+                      <Textarea
+                        id="review-comment"
+                        placeholder="Share your experience with this product..."
+                        value={reviewForm.comment}
+                        onChange={(e) =>
+                          setReviewForm((f) => ({ ...f, comment: e.target.value }))
+                        }
+                        className="mt-1 min-h-[100px]"
+                        maxLength={2000}
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="review-anonymous"
+                        checked={reviewForm.postAnonymously}
+                        onCheckedChange={(checked) =>
+                          setReviewForm((f) => ({
+                            ...f,
+                            postAnonymously: checked === true,
+                          }))
+                        }
+                      />
+                      <Label
+                        htmlFor="review-anonymous"
+                        className="text-sm font-normal cursor-pointer"
+                      >
+                        Post as Anonymous
+                      </Label>
+                    </div>
+                    {!reviewForm.postAnonymously && (
                       <div>
-                        <Label htmlFor="review-comment" className="text-gray-700">
-                          Comment (optional)
+                        <Label htmlFor="review-name" className="text-gray-700">
+                          Display name
                         </Label>
-                        <Textarea
-                          id="review-comment"
-                          placeholder="Share your experience with this product..."
-                          value={reviewForm.comment}
+                        <Input
+                          id="review-name"
+                          placeholder="Your name (e.g. John)"
+                          value={reviewForm.displayName}
                           onChange={(e) =>
-                            setReviewForm((f) => ({ ...f, comment: e.target.value }))
-                          }
-                          className="mt-1 min-h-[100px]"
-                          maxLength={2000}
-                        />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Checkbox
-                          id="review-anonymous"
-                          checked={reviewForm.postAnonymously}
-                          onCheckedChange={(checked) =>
                             setReviewForm((f) => ({
                               ...f,
-                              postAnonymously: checked === true,
+                              displayName: e.target.value,
                             }))
                           }
+                          className="mt-1 max-w-xs"
                         />
-                        <Label
-                          htmlFor="review-anonymous"
-                          className="text-sm font-normal cursor-pointer"
-                        >
-                          Post as Anonymous
-                        </Label>
                       </div>
-                      {!reviewForm.postAnonymously && (
-                        <div>
-                          <Label htmlFor="review-name" className="text-gray-700">
-                            Display name
-                          </Label>
-                          <Input
-                            id="review-name"
-                            placeholder="Your name (e.g. John)"
-                            value={reviewForm.displayName}
-                            onChange={(e) =>
-                              setReviewForm((f) => ({
-                                ...f,
-                                displayName: e.target.value,
-                              }))
-                            }
-                            className="mt-1 max-w-xs"
-                          />
-                        </div>
-                      )}
-                      <Button
-                        onClick={handleSubmitReview}
-                        disabled={reviewSubmitting}
-                        className="bg-orange-500 hover:bg-orange-600"
-                      >
-                        {reviewSubmitting ? "Submitting…" : "Submit review"}
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Review list */}
-                  <div>
-                    <h4 className="font-semibold text-gray-900 mb-3">
-                      {displayReviewCount} {displayReviewCount === 1 ? "review" : "reviews"}
-                    </h4>
-                    {reviewsLoading ? (
-                      <p className="text-gray-500 text-sm">Loading reviews…</p>
-                    ) : reviews.length === 0 ? (
-                      <p className="text-gray-600">No reviews yet. Be the first to review this product!</p>
-                    ) : (
-                      <ul className="space-y-4">
-                        {reviews.map((r) => (
-                          <li
-                            key={r.id}
-                            className="p-4 bg-white rounded-lg border border-slate-200"
-                          >
-                            <div className="flex items-center gap-2 mb-2 flex-wrap">
-                              <span className="font-medium text-gray-900">
-                                {r.authorName}
-                              </span>
-                              <span className="text-yellow-500 text-sm">
-                                {"★".repeat(Math.round(r.rating))}
-                                {"☆".repeat(5 - Math.round(r.rating))}
-                              </span>
-                              <span className="text-xs text-gray-500">
-                                {r.createdAt?.toDate?.()
-                                  ? new Date(r.createdAt.toDate()).toLocaleDateString(undefined, {
-                                      year: "numeric",
-                                      month: "short",
-                                      day: "numeric",
-                                    })
-                                  : ""}
-                              </span>
-                            </div>
-                            {r.comment ? (
-                              <p className="text-gray-600 text-sm">{r.comment}</p>
-                            ) : null}
-                          </li>
-                        ))}
-                      </ul>
                     )}
+                    <Button
+                      onClick={handleSubmitReview}
+                      disabled={reviewSubmitting}
+                      className="bg-orange-500 hover:bg-orange-600"
+                    >
+                      {reviewSubmitting ? "Submitting…" : "Submit review"}
+                    </Button>
                   </div>
                 </div>
-              </TabsContent>
-            </Tabs>
-          </div>
+
+                {/* Review list */}
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-3">
+                    {displayReviewCount} {displayReviewCount === 1 ? "review" : "reviews"}
+                  </h4>
+                  {reviewsLoading ? (
+                    <p className="text-gray-500 text-sm">Loading reviews…</p>
+                  ) : reviews.length === 0 ? (
+                    <p className="text-gray-600">No reviews yet. Be the first to review this product!</p>
+                  ) : (
+                    <ul className="space-y-4">
+                      {reviews.map((r) => (
+                        <li
+                          key={r.id}
+                          className="p-4 bg-white rounded-lg border border-slate-200"
+                        >
+                          <div className="flex items-center gap-2 mb-2 flex-wrap">
+                            <span className="font-medium text-gray-900">
+                              {r.authorName}
+                            </span>
+                            <span className="text-yellow-500 text-sm">
+                              {"★".repeat(Math.round(r.rating))}
+                              {"☆".repeat(5 - Math.round(r.rating))}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              {r.createdAt?.toDate?.()
+                                ? new Date(r.createdAt.toDate()).toLocaleDateString(undefined, {
+                                    year: "numeric",
+                                    month: "short",
+                                    day: "numeric",
+                                  })
+                                : ""}
+                            </span>
+                          </div>
+                          {r.comment ? (
+                            <p className="text-gray-600 text-sm">{r.comment}</p>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
         </div>
 
         {/* You May Also Like */}

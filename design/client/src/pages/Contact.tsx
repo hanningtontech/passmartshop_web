@@ -54,8 +54,8 @@ export default function Contact() {
                 </div>
                 <div>
                   <h3 className="font-bold text-lg mb-1">Phone</h3>
-                  <p className="text-gray-600">+254 726 972 218</p>
-                  <p className="text-gray-600">+254 123 456 789</p>
+                  <p className="text-gray-600">0740730781</p>
+                  <p className="text-gray-600">WhatsApp: +254740730781</p>
                 </div>
               </div>
 
@@ -65,13 +65,9 @@ export default function Contact() {
                   <MapPin className="h-8 w-8 text-orange-500" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-lg mb-1">Address</h3>
+                  <h3 className="font-bold text-lg mb-1">Coverage</h3>
                   <p className="text-gray-600">
-                    Moi Avenue, Kenya Cinema Plaza Building
-                    <br />
-                    5th Floor, Room 5-1A
-                    <br />
-                    Nairobi, Kenya
+                    Countrywide deliveries with a special focus on Nairobi and Thika.
                   </p>
                 </div>
               </div>

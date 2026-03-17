@@ -231,14 +231,6 @@ export default function Shop() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Page Header */}
-      <div className="bg-gradient-to-r from-slate-900 to-slate-700 text-white py-12">
-        <div className="container mx-auto px-4">
-          <h1 className="text-4xl font-bold mb-2">Shop</h1>
-          <p className="text-gray-300">Browse our extensive collection of products</p>
-        </div>
-      </div>
-
       {loadError && (
         <div className="container mx-auto px-4 py-4">
           <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-lg px-4 py-3">
@@ -299,13 +291,25 @@ export default function Shop() {
               {/* Search */}
               <div className="mb-6">
                 <label className="block text-sm font-semibold mb-2">Search</label>
-                <input
-                  type="text"
-                  placeholder="Search products..."
-                  value={filters.search}
-                  onChange={(e) => handleFilterChange("search", e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search products..."
+                    value={filters.search}
+                    onChange={(e) => handleFilterChange("search", e.target.value)}
+                    className="w-full px-3 py-2 pr-9 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                  {filters.search.trim() && (
+                    <button
+                      type="button"
+                      onClick={() => handleFilterChange("search", "")}
+                      className="absolute inset-y-0 right-2 flex items-center text-gray-400 hover:text-gray-600"
+                      aria-label="Clear search"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Category Filter */}
@@ -490,7 +494,7 @@ export default function Shop() {
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
                   {paginatedProducts.slice(0, 8).map((product: any) => (
                     <div key={product.id} className="min-w-0">
-                      <ProductCard product={product} />
+                      <ProductCard product={product} size="small" />
                     </div>
                   ))}
                 </div>
@@ -517,7 +521,7 @@ export default function Shop() {
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 mt-6">
                     {paginatedProducts.slice(8).map((product: any) => (
                       <div key={product.id} className="min-w-0">
-                        <ProductCard product={product} />
+                        <ProductCard product={product} size="small" />
                       </div>
                     ))}
                   </div>

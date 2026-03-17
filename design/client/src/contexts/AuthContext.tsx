@@ -25,6 +25,17 @@ import {
 } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 
+export type PolicyAcceptance = {
+  terms: boolean;
+  privacy: boolean;
+  refund: boolean;
+  shipping: boolean;
+  /** ISO string (client generated) */
+  acceptedAt: string | null;
+  /** Used for future policy updates */
+  version: number;
+};
+
 export interface UserProfile {
   uid: string;
   email: string | null;
@@ -33,6 +44,7 @@ export interface UserProfile {
   phoneNumber: string | null;
   location: string | null;
   address: string | null;
+  policyAcceptance?: PolicyAcceptance | null;
 }
 
 interface AuthContextType {
@@ -47,6 +59,7 @@ interface AuthContextType {
     phoneNumber?: string;
     location?: string;
     address?: string;
+    policyAcceptance?: PolicyAcceptance;
   }) => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
@@ -71,6 +84,7 @@ async function fetchOrCreateUserProfile(user: FirebaseUser): Promise<UserProfile
       phoneNumber: data.phoneNumber ?? user.phoneNumber ?? null,
       location: data.location ?? null,
       address: data.address ?? null,
+      policyAcceptance: data.policyAcceptance ?? null,
     };
   }
 
@@ -82,6 +96,7 @@ async function fetchOrCreateUserProfile(user: FirebaseUser): Promise<UserProfile
     phoneNumber: user.phoneNumber ?? null,
     location: null,
     address: null,
+    policyAcceptance: null,
   };
 
   await setDoc(ref, {
@@ -126,6 +141,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     phoneNumber,
     location,
     address,
+    policyAcceptance,
   }) => {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
     if (displayName) {
@@ -141,6 +157,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       phoneNumber: phoneNumber ?? cred.user.phoneNumber ?? null,
       location: location ?? null,
       address: address ?? null,
+      policyAcceptance: policyAcceptance ?? null,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
@@ -154,6 +171,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       phoneNumber: profileData.phoneNumber,
       location: profileData.location,
       address: profileData.address,
+      policyAcceptance: profileData.policyAcceptance,
     });
     setUser(cred.user);
   };
@@ -183,6 +201,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       payload.phoneNumber = updates.phoneNumber;
     if (typeof updates.location !== "undefined") payload.location = updates.location;
     if (typeof updates.address !== "undefined") payload.address = updates.address;
+    if (typeof (updates as any).policyAcceptance !== "undefined")
+      payload.policyAcceptance = (updates as any).policyAcceptance;
 
     await updateDoc(ref, payload);
 

@@ -70,7 +70,7 @@ export function ProgressiveImage({
             src={placeholderSrc}
             alt=""
             aria-hidden
-            className={`absolute inset-0 w-full h-full object-contain object-center ${className} ${fullLoaded ? "opacity-0" : "opacity-100"} transition-opacity duration-300`}
+            className={`absolute inset-0 w-full h-full object-cover object-center ${className} ${fullLoaded ? "opacity-0" : "opacity-100"} transition-opacity duration-300`}
             loading={loading}
             decoding="async"
           />
@@ -82,7 +82,7 @@ export function ProgressiveImage({
           decoding="async"
           onLoad={handleFullLoad}
           onError={handleError}
-          className={`absolute inset-0 w-full h-full object-contain object-center ${className} ${fullLoaded ? "opacity-100" : "opacity-0"} transition-opacity duration-300`}
+          className={`absolute inset-0 w-full h-full object-cover object-center ${className} ${fullLoaded ? "opacity-100" : "opacity-0"} transition-opacity duration-300`}
         />
       </div>
     </div>

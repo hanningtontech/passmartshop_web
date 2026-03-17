@@ -18,28 +18,41 @@ export default function About() {
       {/* Company Story */}
       <section className="py-16">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
             <div>
-              <h2 className="text-4xl font-bold mb-6">Our Story</h2>
+              <h2 className="text-4xl font-bold mb-6">Who We Are</h2>
               <p className="text-gray-600 mb-4 leading-relaxed">
-                Passmartshop was founded with a simple mission: to make quality
-                home goods and electronics accessible to everyone. We believe that
-                everyone deserves to have access to high-quality products at
-                affordable prices.
+                Passmart Shop is a local retail powerhouse designed to bring the marketplace directly to the
+                doorsteps of customers across Kenya. By curating an extensive selection of essential electrical
+                appliances, stylish clothing, and premium bedding, we serve as a one stop destination for home
+                and lifestyle upgrades.
               </p>
               <p className="text-gray-600 mb-4 leading-relaxed">
-                Since our launch, we've grown to become a trusted online retailer
-                serving thousands of customers across the country. Our commitment
-                to excellence, customer satisfaction, and innovation drives
-                everything we do.
+                The experience is defined by a commitment to reliability and physical convenience, allowing
+                shoppers to browse a diverse inventory with the peace of mind that comes from a dedicated cash
+                on delivery model. Every interaction is built on the promise that what you see is exactly what
+                you get, delivered with a speed that respects the fast paced lives of modern consumers.
+              </p>
+              <p className="text-gray-600 mb-4 leading-relaxed">
+                Operating with a deep focus on the Nairobi and Thika corridors, Passmart Shop bridges the gap
+                between digital browsing and physical ownership. Our brand identity is anchored in a vibrant
+                orange and white palette, reflecting an energetic and transparent approach to commerce.
               </p>
               <p className="text-gray-600 leading-relaxed">
-                Today, we're proud to offer a curated selection of products from
-                trusted brands, backed by our commitment to quality and customer
-                service.
+                With 24/7 support and a delivery network that runs Monday to Saturday, we make sure essential
+                goods are never out of reach. Passmart Shop is fueled by positive customer stories, where the
+                thrill of unboxing a perfect find is matched only by the efficiency of the journey from the
+                warehouse to the home.
               </p>
             </div>
-            <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg h-96" />
+            <div className="rounded-lg overflow-hidden border border-gray-200 bg-white">
+              <img
+                src="/about-who-we-are.png"
+                alt="Passmartshop customer support"
+                className="w-full h-96 object-cover"
+                loading="lazy"
+              />
+            </div>
           </div>
         </div>
       </section>
@@ -78,6 +91,46 @@ export default function About() {
                 Your data and transactions are safe with us.
               </p>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Business Snapshot */}
+      <section className="py-16">
+        <div className="container mx-auto px-4">
+          <h2 className="text-3xl font-bold mb-6">Passmart Shop at a Glance</h2>
+          <div className="bg-white rounded-lg shadow-sm p-6 text-sm text-gray-700 space-y-2">
+            <p><span className="font-semibold">Name:</span> Passmart Shop</p>
+            <p><span className="font-semibold">Schema:</span> LocalBusiness</p>
+            <p><span className="font-semibold">Offerings:</span> Electrical appliances, clothing, and bedding items</p>
+            <p><span className="font-semibold">Geography:</span> Primary delivery to Nairobi and Thika with extended delivery available for a fee</p>
+            <p><span className="font-semibold">Contact Phone:</span> 0740730781</p>
+            <p><span className="font-semibold">Contact Email:</span> support@passmartshop.com</p>
+            <p><span className="font-semibold">WhatsApp:</span> +254740730781</p>
+            <p><span className="font-semibold">Inquiry Hours:</span> 24/7 customer reach out</p>
+            <p><span className="font-semibold">Delivery Schedule:</span> Monday to Saturday</p>
+            <p><span className="font-semibold">Pricing Model:</span> Product based pricing with cash on delivery options</p>
+            <p><span className="font-semibold">Trust Signals:</span> Positive customer reviews highlighting delivery speed and product accuracy</p>
+            <p>
+              <span className="font-semibold">Social Media:</span>{" "}
+              <a
+                href="https://www.tiktok.com/@elima.holdings?_r=1&_t=ZS-94lPR2CEjKi"
+                target="_blank"
+                rel="noreferrer"
+                className="text-orange-600 hover:underline"
+              >
+                TikTok @elima.holdings
+              </a>
+            </p>
+            <p><span className="font-semibold">Visual Identity:</span> Orange and white color scheme</p>
+            <p>
+              <span className="font-semibold">Keywords:</span> Nairobi delivery, Thika shopping, home appliances Kenya,
+              bedding and clothes, cash on delivery shop
+            </p>
+            <p>
+              <span className="font-semibold">Policies:</span> Deliveries outside Nairobi and Thika are subject to
+              additional charges
+            </p>
           </div>
         </div>
       </section>

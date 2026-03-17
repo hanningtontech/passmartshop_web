@@ -1,5 +1,5 @@
 export const INLINE_SHOP_BANNER = {
-  enabled: true,
+  enabled: false,
   headline: "Free Shipping on Orders Over KSh 2,000!",
   subtext: "Shop now and save on delivery.",
   ctaText: "Shop Now",

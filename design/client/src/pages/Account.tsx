@@ -1,10 +1,22 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 type Mode = "login" | "register";
+
+const POLICY_VERSION = 1;
+
+function getInitials(nameOrEmail: string | null | undefined) {
+  const raw = (nameOrEmail ?? "").trim();
+  if (!raw) return "PS";
+  const parts = raw.split(/\s+/).filter(Boolean);
+  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
+  return (parts[0]!.slice(0, 1) + parts[1]!.slice(0, 1)).toUpperCase();
+}
 
 export default function Account() {
   const { user, profile, loading, signInWithEmail, signUpWithEmail, signInWithGoogle, updateProfile, deleteAccount, signOut } =
@@ -22,6 +34,18 @@ export default function Account() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [acceptPrivacy, setAcceptPrivacy] = useState(false);
+  const [acceptRefund, setAcceptRefund] = useState(false);
+  const [acceptShipping, setAcceptShipping] = useState(false);
+
+  const policyAccepted = useMemo(() => {
+    const pa = profile?.policyAcceptance;
+    return Boolean(pa?.terms && pa?.privacy && pa?.refund && pa?.shipping);
+  }, [profile?.policyAcceptance]);
+
+  const canAcceptNow = acceptTerms && acceptPrivacy && acceptRefund && acceptShipping;
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password || !username) {
@@ -30,6 +54,10 @@ export default function Account() {
     }
     if (password !== confirmPassword) {
       toast.error("Passwords do not match.");
+      return;
+    }
+    if (!canAcceptNow) {
+      toast.error("Please accept Terms, Privacy, Refund, and Shipping policies to continue.");
       return;
     }
     try {
@@ -42,6 +70,14 @@ export default function Account() {
         phoneNumber: phoneNumber || undefined,
         location: location || undefined,
         address: address || undefined,
+        policyAcceptance: {
+          terms: true,
+          privacy: true,
+          refund: true,
+          shipping: true,
+          acceptedAt: new Date().toISOString(),
+          version: POLICY_VERSION,
+        },
       });
       toast.success("Account created successfully.");
       setLocation("/account");
@@ -92,7 +128,6 @@ export default function Account() {
         displayName: displayName || profile?.displayName || null,
         phoneNumber: phoneNumber || profile?.phoneNumber || null,
         location: location || profile?.location || null,
-        address: address || profile?.address || null,
       });
       toast.success("Profile updated.");
     } catch (err: any) {
@@ -130,13 +165,105 @@ export default function Account() {
     return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-12 max-w-2xl">
-          <h1 className="text-3xl font-bold mb-6">Your Account</h1>
+          <div className="flex items-center gap-4 mb-6">
+            <Avatar className="size-12">
+              <AvatarImage src={user.photoURL ?? undefined} alt={profile.displayName ?? profile.username ?? "Profile"} />
+              <AvatarFallback className="bg-orange-100 text-orange-700 font-bold">
+                {getInitials(profile.displayName || profile.username || profile.email || user.email)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0">
+              <h1 className="text-3xl font-bold">Your Account</h1>
+              <p className="text-gray-600 truncate">
+                Signed in as <span className="font-semibold">{profile.email || user.email}</span>
+              </p>
+            </div>
+          </div>
 
-          <p className="mb-4 text-gray-700">
-            Signed in as <span className="font-semibold">{profile.email || user.email}</span>
-          </p>
+          {!policyAccepted && (
+            <div className="mb-6 bg-white rounded-lg shadow-sm p-6 border border-orange-100">
+              <h2 className="text-lg font-semibold mb-2">One-time policy acceptance</h2>
+              <p className="text-sm text-gray-600 mb-4">
+                Please accept our policies to continue using your account and placing orders.
+              </p>
 
-          <form onSubmit={handleProfileSave} className="space-y-6 bg-white rounded-lg shadow-sm p-6">
+              <div className="space-y-3">
+                <label className="flex items-start gap-3 text-sm text-gray-700 cursor-pointer">
+                  <Checkbox checked={acceptTerms} onCheckedChange={(v) => setAcceptTerms(Boolean(v))} />
+                  <span>
+                    I accept the{" "}
+                    <Link href="/terms">
+                      <a className="text-orange-600 hover:underline">Terms &amp; Conditions</a>
+                    </Link>
+                    .
+                  </span>
+                </label>
+                <label className="flex items-start gap-3 text-sm text-gray-700 cursor-pointer">
+                  <Checkbox checked={acceptPrivacy} onCheckedChange={(v) => setAcceptPrivacy(Boolean(v))} />
+                  <span>
+                    I accept the{" "}
+                    <Link href="/privacy-policy">
+                      <a className="text-orange-600 hover:underline">Privacy Policy</a>
+                    </Link>
+                    .
+                  </span>
+                </label>
+                <label className="flex items-start gap-3 text-sm text-gray-700 cursor-pointer">
+                  <Checkbox checked={acceptRefund} onCheckedChange={(v) => setAcceptRefund(Boolean(v))} />
+                  <span>
+                    I accept the{" "}
+                    <Link href="/refund-policy">
+                      <a className="text-orange-600 hover:underline">Refund Policy</a>
+                    </Link>
+                    .
+                  </span>
+                </label>
+                <label className="flex items-start gap-3 text-sm text-gray-700 cursor-pointer">
+                  <Checkbox checked={acceptShipping} onCheckedChange={(v) => setAcceptShipping(Boolean(v))} />
+                  <span>
+                    I accept the{" "}
+                    <Link href="/shipping-policy">
+                      <a className="text-orange-600 hover:underline">Shipping Policy</a>
+                    </Link>
+                    .
+                  </span>
+                </label>
+              </div>
+
+              <div className="mt-5">
+                <Button
+                  type="button"
+                  disabled={saving || !canAcceptNow}
+                  className="bg-orange-500 hover:bg-orange-600 text-white"
+                  onClick={async () => {
+                    if (!canAcceptNow) return;
+                    try {
+                      setSaving(true);
+                      await updateProfile({
+                        policyAcceptance: {
+                          terms: true,
+                          privacy: true,
+                          refund: true,
+                          shipping: true,
+                          acceptedAt: new Date().toISOString(),
+                          version: POLICY_VERSION,
+                        },
+                      } as any);
+                      toast.success("Thanks! Policies accepted.");
+                    } catch (err: any) {
+                      toast.error(err?.message || "Failed to save acceptance.");
+                    } finally {
+                      setSaving(false);
+                    }
+                  }}
+                >
+                  Save acceptance
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <form onSubmit={handleProfileSave} className={`space-y-6 bg-white rounded-lg shadow-sm p-6 ${!policyAccepted ? "opacity-60 pointer-events-none" : ""}`}>
             <div>
               <label className="block font-semibold mb-2">Username</label>
               <input
@@ -185,12 +312,12 @@ export default function Account() {
             </div>
 
             <div>
-              <label className="block font-semibold mb-2">Address (Optional)</label>
+              <label className="block font-semibold mb-2">Address (optional)</label>
               <input
                 type="text"
                 value={address || profile.address || ""}
                 onChange={(e) => setAddress(e.target.value)}
-                placeholder="Street, building, floor"
+                placeholder="Street / apartment / landmark"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
               />
             </div>
@@ -341,7 +468,7 @@ export default function Account() {
                 />
               </div>
               <div>
-                <label className="block font-semibold mb-2">Location (optional)</label>
+                <label className="block font-semibold mb-2">City (optional)</label>
                 <input
                   type="text"
                   value={location}
@@ -358,9 +485,55 @@ export default function Account() {
                 type="text"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                placeholder="Street, building, floor"
+                placeholder="Street / apartment / landmark"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
               />
+            </div>
+
+            <div className="rounded-lg border border-gray-200 p-4 space-y-3">
+              <p className="font-semibold text-sm text-gray-900">
+                Please accept our policies to create an account:
+              </p>
+              <label className="flex items-start gap-3 text-sm text-gray-700 cursor-pointer">
+                <Checkbox checked={acceptTerms} onCheckedChange={(v) => setAcceptTerms(Boolean(v))} />
+                <span>
+                  I accept the{" "}
+                  <Link href="/terms">
+                    <a className="text-orange-600 hover:underline">Terms &amp; Conditions</a>
+                  </Link>
+                  .
+                </span>
+              </label>
+              <label className="flex items-start gap-3 text-sm text-gray-700 cursor-pointer">
+                <Checkbox checked={acceptPrivacy} onCheckedChange={(v) => setAcceptPrivacy(Boolean(v))} />
+                <span>
+                  I accept the{" "}
+                  <Link href="/privacy-policy">
+                    <a className="text-orange-600 hover:underline">Privacy Policy</a>
+                  </Link>
+                  .
+                </span>
+              </label>
+              <label className="flex items-start gap-3 text-sm text-gray-700 cursor-pointer">
+                <Checkbox checked={acceptRefund} onCheckedChange={(v) => setAcceptRefund(Boolean(v))} />
+                <span>
+                  I accept the{" "}
+                  <Link href="/refund-policy">
+                    <a className="text-orange-600 hover:underline">Refund Policy</a>
+                  </Link>
+                  .
+                </span>
+              </label>
+              <label className="flex items-start gap-3 text-sm text-gray-700 cursor-pointer">
+                <Checkbox checked={acceptShipping} onCheckedChange={(v) => setAcceptShipping(Boolean(v))} />
+                <span>
+                  I accept the{" "}
+                  <Link href="/shipping-policy">
+                    <a className="text-orange-600 hover:underline">Shipping Policy</a>
+                  </Link>
+                  .
+                </span>
+              </label>
             </div>
 
             <Button

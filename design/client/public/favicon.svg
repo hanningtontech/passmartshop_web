@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Flutter">
+  <rect width="256" height="256" rx="56" fill="#ffffff"/>
+  <!-- Simplified Flutter mark -->
+  <path d="M58 128 128 58l40 40-70 70z" fill="#54C5F8"/>
+  <path d="M128 198 58 128l40-40 70 70z" fill="#01579B"/>
+  <path d="M168 98 198 128l-70 70-40-40z" fill="#29B6F6"/>
+</svg>

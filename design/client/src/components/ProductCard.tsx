@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { ShoppingCart, Heart } from "lucide-react";
+import { ShoppingCart, Flame } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProgressiveImage } from "@/components/ProgressiveImage";
@@ -34,10 +34,19 @@ type ProductCardData = {
   subProducts?: Array<{ id: string; name: string; sku?: string; price?: number }>;
 };
 
-export default function ProductCard({ product }: { product: ProductCardData }) {
-  const [isWishlisted, setIsWishlisted] = useState(false);
+type ProductCardSize = "default" | "small";
+
+export default function ProductCard({
+  product,
+  size = "default",
+}: {
+  product: ProductCardData;
+  size?: ProductCardSize;
+}) {
   const [imageLoaded, setImageLoaded] = useState(false);
   const { addToCart } = useCart();
+
+  const isSmall = size === "small";
 
   // Normalize price: use flash sale price when product is on flash sale
   const regularPrice =
@@ -80,12 +89,12 @@ export default function ProductCard({ product }: { product: ProductCardData }) {
     null;
 
   return (
-    <Card className="hover:shadow-sm transition-shadow duration-300 overflow-hidden group min-w-0 flex flex-col pt-0">
-      <CardContent className="p-0 flex flex-col flex-1 min-h-0 rounded-lg">
+    <Card className="hover:shadow-sm transition-shadow duration-300 overflow-hidden group min-w-0 flex flex-col pt-0 h-full">
+      <CardContent className="p-0 flex flex-col flex-1 min-h-0 rounded-lg h-full">
         {/* Image – compact aspect and height */}
         <Link href={`/product/${product.id}`} className="block min-w-0 flex-shrink-0">
           {/* Image holder: pure 4:5, scales with card width on any screen */}
-          <div className="relative w-full aspect-[4/5] overflow-hidden bg-gray-100 cursor-pointer">
+          <div className={`relative w-full ${isSmall ? "aspect-square" : "aspect-[4/5]"} overflow-hidden bg-gray-100 cursor-pointer`}>
             {imageSrc ? (
               <>
                 {!imageLoaded && (
@@ -142,100 +151,62 @@ export default function ProductCard({ product }: { product: ProductCardData }) {
               </div>
             )}
 
-            {/* Badges */}
-            <div className="absolute top-1.5 right-1.5 flex flex-col gap-0.5">
-              {product.flashSale && (
-                <div className="bg-orange-500 text-white px-1.5 py-0.5 rounded text-[10px] font-semibold leading-tight whitespace-nowrap">
-                  Flash Sale
-                </div>
-              )}
+            {/* Top-right badges (discount / featured) */}
+            <div className={`absolute ${isSmall ? "top-1 right-1" : "top-1.5 right-1.5"} flex flex-col gap-0.5 items-end`}>
               {discount > 0 && (
-                <div className="bg-red-500 text-white px-1.5 py-0.5 rounded text-[10px] font-semibold leading-tight whitespace-nowrap">
+                <div className={`bg-red-500 text-white ${isSmall ? "px-1 py-0.5 text-[9px]" : "px-1.5 py-0.5 text-[10px]"} rounded font-semibold leading-tight whitespace-nowrap`}>
                   {discount}% OFF
                 </div>
               )}
               {product.featured && (
-                <div className="bg-amber-500 text-white px-1.5 py-0.5 rounded text-[10px] font-semibold leading-tight whitespace-nowrap">
+                <div className={`bg-amber-500 text-white ${isSmall ? "px-1 py-0.5 text-[9px]" : "px-1.5 py-0.5 text-[10px]"} rounded font-semibold leading-tight whitespace-nowrap`}>
                   Featured
                 </div>
               )}
-              {product.isNew && (
-                <div className="bg-green-500 text-white px-1.5 py-0.5 rounded text-[10px] font-semibold leading-tight whitespace-nowrap">
-                  NEW
-                </div>
-              )}
             </div>
 
-            {/* Shipping badge – bottom left */}
-            <div className="absolute bottom-1.5 left-1.5 hidden sm:block">
-              {product.localStock === true ? (
-                <span className="bg-green-600/90 text-white text-[9px] font-medium px-1.5 py-0.5 rounded">
-                  Local Stock
-                </span>
-              ) : (
-                <span className="bg-gray-600/80 text-white text-[9px] font-medium px-1.5 py-0.5 rounded">
-                  Ships from Overseas
-                </span>
-              )}
-            </div>
+            {/* NEW badge – top-left */}
+            {product.isNew && (
+              <div className={`absolute ${isSmall ? "top-1 left-1 px-1 py-0.5 text-[9px]" : "top-1.5 left-1.5 px-1.5 py-0.5 text-[10px]"} bg-green-600 text-white rounded font-semibold leading-tight whitespace-nowrap`}>
+                NEW
+              </div>
+            )}
 
-            {/* Wishlist */}
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                setIsWishlisted(!isWishlisted);
-              }}
-              className="absolute top-1.5 left-1.5 bg-white rounded-full p-1 hover:bg-gray-100 transition z-10"
-            >
-              <Heart
-                className={`h-3.5 w-3.5 ${isWishlisted ? "fill-red-500 text-red-500" : "text-gray-600"}`}
-              />
-            </button>
+            {/* Flash sale – bottom-right with flame icon */}
+            {product.flashSale && (
+              <div className={`absolute ${isSmall ? "bottom-1 right-1 px-1 py-0.5" : "bottom-1.5 right-1.5 px-1.5 py-0.5"} flex items-center gap-0.5 bg-orange-600/95 text-white rounded-sm`}>
+                <Flame className="h-3 w-3" />
+              </div>
+            )}
           </div>
         </Link>
 
-        {/* Content – compact spacing and smaller text */}
-        <div className="p-1 sm:p-1.5 flex flex-col min-h-0 flex-1">
+        {/* Content – compact spacing and fixed height to keep cards consistent */}
+        <div
+          className={`${
+            isSmall ? "px-1 pt-1 pb-0.5" : "px-1 pt-1 pb-1 sm:px-1.5 sm:pt-1.5 sm:pb-1"
+          } flex flex-col flex-1 min-h-0 ${isSmall ? "h-[80px]" : "h-[100px]"} overflow-hidden`}
+        >
           <Link href={`/product/${product.id}`} className="min-w-0">
-            <h3 className="font-semibold text-[11px] leading-snug mb-0.5 line-clamp-2 hover:text-orange-500 transition cursor-pointer break-words">
+            <h3 className={`font-semibold ${isSmall ? "text-[10px]" : "text-[11px]"} leading-snug mb-0.5 line-clamp-2 hover:text-orange-500 transition cursor-pointer break-words`}>
               {product.name}
             </h3>
           </Link>
 
-          {(product.rating != null && product.rating > 0) && (
-            <div className="flex items-center gap-0.5 mb-0.5 flex-shrink-0">
-              <div className="flex text-yellow-400 text-xs">
-                {[...Array(5)].map((_, i) => (
-                  <span key={i}>{i < Math.round(product.rating || 0) ? "★" : "☆"}</span>
-                ))}
-              </div>
-              <span className="text-[10px] text-gray-600">
-                ({product.reviewCount != null ? product.reviewCount : product.rating})
-              </span>
-            </div>
-          )}
-          {product.soldCount != null && product.soldCount > 0 && (
-            <p className="text-[10px] text-gray-500 mb-0.5">
-              {product.soldCount >= 1000
-                ? `${(product.soldCount / 1000).toFixed(1)}k sold`
-                : `${product.soldCount} sold`}
-            </p>
-          )}
-
           <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0 mb-1 min-w-0">
-            <span className="text-[12px] font-bold text-orange-600 whitespace-nowrap">
+            <span className={`${isSmall ? "text-[11px]" : "text-[12px]"} font-bold text-orange-600 whitespace-nowrap`}>
               KSh {basePrice.toFixed(0)}
             </span>
             {originalPrice && (
-              <span className="text-[11px] text-gray-500 line-through whitespace-nowrap">
+              <span className={`${isSmall ? "text-[10px]" : "text-[11px]"} text-gray-500 line-through whitespace-nowrap`}>
                 KSh {originalPrice.toFixed(0)}
               </span>
             )}
           </div>
 
-          <div className="mb-1 flex-shrink-0">
+          <div className="mt-auto flex-shrink-0">
             {product.inStock ? (
-              <span className="text-[10px] text-green-600 font-semibold">
+              <span className={`${isSmall ? "text-[9px]" : "text-[10px]"} text-green-600 font-semibold`}>
                 In Stock
                 {(() => {
                   const sq = product.stockQuantity;
@@ -249,7 +220,7 @@ export default function ProductCard({ product }: { product: ProductCardData }) {
                 })()}
               </span>
             ) : (
-              <span className="text-[10px] text-red-600 font-semibold">Out of Stock</span>
+              <span className={`${isSmall ? "text-[9px]" : "text-[10px]"} text-red-600 font-semibold`}>Out of Stock</span>
             )}
           </div>
         </div>

@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { Trash2, ShoppingBag, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,11 @@ export default function Cart() {
   const [, setLocation] = useLocation();
   const { items, removeFromCart, updateQuantity, totalPrice, clearCart } =
     useCart();
+
+  useEffect(() => {
+    // Ensure cart opens from the top (SPA nav can preserve scroll position)
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, []);
 
   if (items.length === 0) {
     return (

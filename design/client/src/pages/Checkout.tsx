@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useLocation, Link } from "wouter";
 import { CheckCircle, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { trpc } from "@/lib/trpc";
 import { useCart } from "@/contexts/CartContext";
 import { toast } from "sonner";
 import type { PaymentMethod } from "@/types/order";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   TAX_RATE,
   FREE_SHIPPING_THRESHOLD_KSH,
@@ -18,6 +19,8 @@ import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { useAuth } from "@/contexts/AuthContext";
 
 const MPESA_TILL_NUMBER = "0740730781";
+const POLICY_VERSION = 1;
+const GUEST_POLICY_KEY = `passmartshop-policy-acceptance-v${POLICY_VERSION}`;
 
 function getShippingCostKsh(deliveryArea: string): number {
   if (FREE_SHIPPING_AREAS.some((a) => a.toLowerCase() === deliveryArea.trim().toLowerCase()))
@@ -45,7 +48,32 @@ export default function Checkout() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("M-Pesa");
   const [mpesaTransactionCode, setMpesaTransactionCode] = useState("");
   const [deliveryArea, setDeliveryArea] = useState<string>("");
-  const { user, profile } = useAuth();
+  const { user, profile, updateProfile } = useAuth();
+
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [acceptPrivacy, setAcceptPrivacy] = useState(false);
+  const [acceptRefund, setAcceptRefund] = useState(false);
+  const [acceptShipping, setAcceptShipping] = useState(false);
+
+  const userPolicyAccepted = useMemo(() => {
+    const pa = profile?.policyAcceptance;
+    return Boolean(pa?.terms && pa?.privacy && pa?.refund && pa?.shipping);
+  }, [profile?.policyAcceptance]);
+
+  const guestPolicyAccepted = useMemo(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      const raw = localStorage.getItem(GUEST_POLICY_KEY);
+      if (!raw) return false;
+      const data = JSON.parse(raw) as any;
+      return Boolean(data?.terms && data?.privacy && data?.refund && data?.shipping);
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const mustAcceptPolicies = !userPolicyAccepted && !guestPolicyAccepted;
+  const canAcceptNow = acceptTerms && acceptPrivacy && acceptRefund && acceptShipping;
 
   const subtotal = totalPrice;
   const tax = subtotal * TAX_RATE;
@@ -78,7 +106,7 @@ export default function Checkout() {
         customerName: variables.customerName,
         customerEmail: variables.customerEmail,
         customerPhone: variables.customerPhone ?? "",
-        shippingAddress: variables.shippingAddress,
+        shippingAddress: variables.shippingAddress ?? "",
         shippingCity: variables.shippingCity ?? "",
         shippingPostalCode: variables.shippingPostalCode ?? "",
         shippingCountry: variables.shippingCountry ?? "",
@@ -132,6 +160,36 @@ export default function Checkout() {
       return;
     }
 
+    if (mustAcceptPolicies && !canAcceptNow) {
+      toast.error("Please accept Terms, Privacy, Refund, and Shipping policies to place your order.");
+      setIsProcessing(false);
+      return;
+    }
+
+    if (mustAcceptPolicies && canAcceptNow) {
+      const acceptance = {
+        terms: true,
+        privacy: true,
+        refund: true,
+        shipping: true,
+        acceptedAt: new Date().toISOString(),
+        version: POLICY_VERSION,
+      };
+      if (user?.uid) {
+        try {
+          await updateProfile({ policyAcceptance: acceptance } as any);
+        } catch (err) {
+          console.warn("[Checkout] Failed to save policy acceptance to profile:", err);
+        }
+      } else {
+        try {
+          localStorage.setItem(GUEST_POLICY_KEY, JSON.stringify(acceptance));
+        } catch {
+          // ignore
+        }
+      }
+    }
+
     const orderItems = items.map((item) => ({
       productId: Number(item.id) || 0,
       productName:
@@ -151,10 +209,10 @@ export default function Checkout() {
       customerEmail: formData.get("email") as string,
       customerName: formData.get("name") as string,
       customerPhone: formData.get("phone") as string,
-      shippingAddress: formData.get("address") as string,
+      shippingAddress: city,
       shippingCity: city,
-      shippingPostalCode: formData.get("postalCode") as string,
-      shippingCountry: formData.get("country") as string,
+      shippingPostalCode: "",
+      shippingCountry: "",
       items: orderItems,
       subtotal,
       shippingCost: computedShipping,
@@ -214,9 +272,11 @@ export default function Checkout() {
           <div className="flex justify-between items-start border-b border-gray-200 pb-4 mb-6">
             <Link href="/" className="print:pointer-events-none">
               <div className="flex items-center gap-2">
-                <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center text-white font-bold">
-                  PS
-                </div>
+                <img
+                  src="/favicon.png"
+                  alt="Passmartshop"
+                  className="w-10 h-10 rounded-lg object-contain bg-white border border-orange-100"
+                />
                 <span className="font-bold text-xl text-gray-900">Passmartshop</span>
               </div>
             </Link>
@@ -347,7 +407,7 @@ export default function Checkout() {
 
               {/* Shipping Information */}
               <div className="bg-white rounded-lg shadow-sm p-6">
-                <h2 className="text-2xl font-bold mb-6">Shipping Address</h2>
+                <h2 className="text-2xl font-bold mb-6">Delivery Area</h2>
 
                 <div className="space-y-4">
                   <div>
@@ -366,50 +426,20 @@ export default function Checkout() {
                       <option value="Other">Other – Outside Nairobi &amp; Thika (KSh 200+)</option>
                     </select>
                     <p className="text-sm text-gray-500 mt-1">
-                      Free delivery in Nairobi and Thika. Outside these areas, KSh 200 or more may apply (parcel company charges).
+                      Countrywide deliveries. Additional courier charges may apply outside Nairobi and Thika.
                     </p>
                   </div>
 
-                  <div>
-                    <label className="block font-semibold mb-2">
-                      Street Address *
-                    </label>
-                    <input
-                      type="text"
-                      name="address"
-                      required
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block font-semibold mb-2">
-                        {deliveryArea === "Other" ? "City / Town *" : "City"}
+                        {deliveryArea === "Other" ? "City / Town *" : "City (optional)"}
                       </label>
                       <input
                         type="text"
                         name="city"
                         required={deliveryArea === "Other"}
-                        placeholder={deliveryArea === "Other" ? "e.g. Mombasa, Kisumu" : ""}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-semibold mb-2">
-                        Postal Code
-                      </label>
-                      <input
-                        type="text"
-                        name="postalCode"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-semibold mb-2">Country</label>
-                      <input
-                        type="text"
-                        name="country"
+                        placeholder={deliveryArea === "Other" ? "e.g. Mombasa, Kisumu" : "e.g. Nairobi CBD"}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                       />
                     </div>
@@ -492,6 +522,58 @@ export default function Checkout() {
                   </div>
                 )}
               </div>
+
+              {/* Policies acceptance (required for first-time / guests) */}
+              {mustAcceptPolicies && (
+                <div className="bg-white rounded-lg shadow-sm p-6 border border-orange-100">
+                  <h2 className="text-2xl font-bold mb-2">Policies</h2>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Please accept our policies to place your order.
+                  </p>
+                  <div className="space-y-3">
+                    <label className="flex items-start gap-3 text-sm text-gray-700 cursor-pointer">
+                      <Checkbox checked={acceptTerms} onCheckedChange={(v) => setAcceptTerms(Boolean(v))} />
+                      <span>
+                        I accept the{" "}
+                        <Link href="/terms">
+                          <a className="text-orange-600 hover:underline">Terms &amp; Conditions</a>
+                        </Link>
+                        .
+                      </span>
+                    </label>
+                    <label className="flex items-start gap-3 text-sm text-gray-700 cursor-pointer">
+                      <Checkbox checked={acceptPrivacy} onCheckedChange={(v) => setAcceptPrivacy(Boolean(v))} />
+                      <span>
+                        I accept the{" "}
+                        <Link href="/privacy-policy">
+                          <a className="text-orange-600 hover:underline">Privacy Policy</a>
+                        </Link>
+                        .
+                      </span>
+                    </label>
+                    <label className="flex items-start gap-3 text-sm text-gray-700 cursor-pointer">
+                      <Checkbox checked={acceptRefund} onCheckedChange={(v) => setAcceptRefund(Boolean(v))} />
+                      <span>
+                        I accept the{" "}
+                        <Link href="/refund-policy">
+                          <a className="text-orange-600 hover:underline">Refund Policy</a>
+                        </Link>
+                        .
+                      </span>
+                    </label>
+                    <label className="flex items-start gap-3 text-sm text-gray-700 cursor-pointer">
+                      <Checkbox checked={acceptShipping} onCheckedChange={(v) => setAcceptShipping(Boolean(v))} />
+                      <span>
+                        I accept the{" "}
+                        <Link href="/shipping-policy">
+                          <a className="text-orange-600 hover:underline">Shipping Policy</a>
+                        </Link>
+                        .
+                      </span>
+                    </label>
+                  </div>
+                </div>
+              )}
 
               <Button
                 type="submit"

@@ -15,8 +15,9 @@ export default function ShippingPolicy() {
           <section>
             <h2 className="text-2xl font-bold mb-3">1. Delivery Areas</h2>
             <p>
-              We deliver within Nairobi and to major towns across Kenya through trusted courier
-              partners. Some remote locations may attract additional fees or longer delivery times.
+              We offer countrywide deliveries across Kenya through trusted courier partners, with a
+              special focus on Nairobi and Thika. Some remote locations may attract additional fees
+              or longer delivery times.
             </p>
           </section>
 
