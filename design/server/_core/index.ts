@@ -1,6 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import { COOKIE_NAME } from "../../shared/const";
 import { createServer } from "http";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
@@ -46,6 +47,23 @@ async function startServer() {
       credentials: true,
     })
   );
+  // Lightweight auth logging: indicates whether the session cookie is present on incoming requests.
+  app.use((req, _res, next) => {
+    try {
+      const cookieHeader = String(req.headers?.cookie || "");
+      const hasCookieHeader = cookieHeader.length > 0;
+      const hasSessionCookie = cookieHeader.includes(COOKIE_NAME);
+      console.log("[Auth] incoming request", {
+        method: req.method,
+        url: req.url,
+        hasCookieHeader,
+        hasSessionCookie,
+      });
+    } catch (err) {
+      console.error("[Auth] failed to read cookies", err);
+    }
+    next();
+  });
   // tRPC API
   app.use(
     "/api/trpc",
