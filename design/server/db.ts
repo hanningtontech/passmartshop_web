@@ -1,5 +1,6 @@
 import { eq, like, and, gte, lte, desc, asc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
+import mysql from "mysql2/promise";
 import {
   InsertUser,
   users,
@@ -18,12 +19,33 @@ let _db: ReturnType<typeof drizzle> | null = null;
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      // Parse DATABASE_URL and create a mysql2 pool with explicit SSL options.
+      const dbUrl = new URL(process.env.DATABASE_URL);
+
+      const pool = await mysql.createPool({
+        host: dbUrl.hostname,
+        port: Number(dbUrl.port || 3306),
+        user: decodeURIComponent(dbUrl.username),
+        password: decodeURIComponent(dbUrl.password || ""),
+        database: dbUrl.pathname.replace(/^\//, ""),
+        // Enforce TLS for TiDB Cloud serverless clusters.
+        ssl: {
+          // Accept the server certificate; set rejectUnauthorized true in production.
+          rejectUnauthorized: true,
+        },
+        // Optional connection limits
+        waitForConnections: true,
+        connectionLimit: 10,
+        queueLimit: 0,
+      });
+
+      _db = drizzle(pool);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
     }
   }
+
   return _db;
 }
 
