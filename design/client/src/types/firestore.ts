@@ -16,12 +16,16 @@ export interface FirestoreCategory {
   createdAt?: unknown;
 }
 
+/** Variant (sub-product) as stored by admin: price/stock can be string or number. */
 export interface FirestoreSubProduct {
   id: string;
   name: string;
-  sku?: string;
-  price: number;
-  stockCount?: string;
+  sku: string;
+  price: number | string;
+  stockCount: string;
+  compareAtPrice?: number | string;
+  images?: string[];
+  description?: string;
 }
 
 export interface FirestoreProduct {
@@ -40,6 +44,8 @@ export interface FirestoreProduct {
   images?: string[];
   /** For search: e.g. ["wireless", "bluetooth", "portable"] */
   tags?: string[];
+  /** When true, listing and detail use variant data (price, stock, description, images). */
+  hasVariants?: boolean;
   subProducts?: FirestoreSubProduct[];
   /** Kilimall-style: flash sale flag and price */
   flashSale?: boolean;

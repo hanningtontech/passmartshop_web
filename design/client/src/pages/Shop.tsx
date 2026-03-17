@@ -157,7 +157,8 @@ export default function Shop() {
   };
 
   // Apply filters, sorting and pagination on the loaded products
-  const pageSize = 20;
+  // Show up to 50 products per page before navigating to the next page
+  const pageSize = 50;
 
   const filteredAndSorted = allProducts
     .filter((product) => {

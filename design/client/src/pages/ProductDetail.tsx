@@ -17,6 +17,15 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProgressiveImage } from "@/components/ProgressiveImage";
 import { buildSrcSet, formatCurrency, getLowQualityImageUrl } from "@/lib/imageUtils";
+import {
+  getDisplayCompareAtPrice,
+  getDisplayDescription,
+  getDisplayImages,
+  getDisplayPrice,
+  getDisplayStock,
+  getPrimaryVariant,
+  type Variant,
+} from "@/lib/productUtils";
 import { useCart } from "@/contexts/CartContext";
 import { useBehavior } from "@/contexts/BehaviorContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -59,23 +68,37 @@ export default function ProductDetail() {
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewForm, setReviewForm] = useState({ rating: 5, comment: "", displayName: "", postAnonymously: true });
   const [imageZoom, setImageZoom] = useState({ active: false, originX: 50, originY: 50 });
-  const [selectedVariant, setSelectedVariant] = useState<{
-    id: string;
-    name: string;
-    sku?: string;
-    price?: number;
-    stockCount?: string;
-    stockQuantity?: number;
-  } | null>(null);
+  const [selectedVariantId, setSelectedVariantId] = useState<string | undefined>(undefined);
 
   const productId = params?.id ?? null;
 
   const [activeTab, setActiveTab] = useState<"description" | "specifications" | "reviews">("description");
   const reviewsRef = useRef<HTMLDivElement | null>(null);
 
+  // Whenever the product changes (or route id changes), set primary variant id
+  // so that variant-based products always show a concrete price and state by default.
   useEffect(() => {
-    setSelectedVariant(null);
-  }, [productId]);
+    if (product?.subProducts && product.subProducts.length > 0) {
+      const primary = getPrimaryVariant(product);
+      setSelectedVariantId((prevId) => {
+        if (prevId && product.subProducts.some((sp: Variant) => String(sp.id) === String(prevId)))
+          return prevId;
+        return primary?.id;
+      });
+      setSelectedImageIndex(0);
+      setQuantity(1);
+    } else {
+      setSelectedVariantId(undefined);
+      setSelectedImageIndex(0);
+      setQuantity(1);
+    }
+  }, [productId, product?.subProducts]);
+
+  const selectedVariant: Variant | undefined =
+    product?.hasVariants && Array.isArray(product.subProducts) && product.subProducts.length > 0
+      ? product.subProducts.find((sp: Variant) => String(sp.id) === String(selectedVariantId)) ??
+        getPrimaryVariant(product)
+      : undefined;
 
   const handleImageMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const el = e.currentTarget;
@@ -224,21 +247,12 @@ export default function ProductDetail() {
       .finally(() => setReviewsLoading(false));
   }, [productId]);
 
-  // Stock / cart cap – use variant stock when a variant is selected and product has subProducts
+  const displayStock = product ? getDisplayStock(product, selectedVariant) : undefined;
   const availableStock: number | null = product
     ? (() => {
-        if (product.subProducts?.length > 0 && selectedVariant) {
-          const sq = selectedVariant.stockQuantity;
-          const sc = selectedVariant.stockCount;
-          if (typeof sq === "number" && Number.isFinite(sq) && sq >= 0) return sq;
-          if (sc != null) {
-            const n = parseInt(String(sc), 10);
-            if (!Number.isNaN(n) && n >= 0) return n;
-          }
-          return null;
-        }
-        const sc = product.stockCount;
+        if (displayStock !== undefined && !Number.isNaN(displayStock)) return displayStock;
         const sq = product.stockQuantity;
+        const sc = product.stockCount;
         if (typeof sq === "number" && Number.isFinite(sq) && sq >= 0) return sq;
         if (sc != null) {
           const n = parseInt(String(sc), 10);
@@ -293,21 +307,14 @@ export default function ProductDetail() {
     );
   }
 
-  const basePrice = (() => {
-    if (product.subProducts?.length > 0 && selectedVariant && typeof selectedVariant.price === "number")
-      return selectedVariant.price;
-    return typeof product.price === "number"
-      ? product.price
-      : product.basePrice
-        ? parseFloat(product.basePrice)
-        : 0;
-  })();
+  const basePrice = getDisplayPrice(product, selectedVariant);
   const originalPrice =
-    product.compareAtPrice != null
-      ? product.compareAtPrice
+    getDisplayCompareAtPrice(product, selectedVariant) ??
+    (product.compareAtPrice != null
+      ? Number(product.compareAtPrice)
       : product.originalPrice
         ? parseFloat(product.originalPrice)
-        : null;
+        : null);
   const discount =
     originalPrice != null
       ? Math.round(((originalPrice - basePrice) / originalPrice) * 100)
@@ -322,28 +329,10 @@ export default function ProductDetail() {
   const displayRating = reviewCount > 0 ? averageRating : (product.rating ?? 0);
   const displayReviewCount = reviewCount > 0 ? reviewCount : (product.reviewCount ?? 0);
 
-  // Base product images (used when no variant images are available)
-  const baseProductImages =
-    product.images?.length > 0
-      ? product.images
-      : product.imageUrls?.length > 0
-      ? product.imageUrls
-      : product.primaryImageUrl
-      ? [product.primaryImageUrl]
-      : [];
-
   const hasVariants =
-    (product.hasVariants === true) || (product.subProducts?.length ?? 0) > 0;
-
-  // When a variant is selected and it has its own images (from admin's variant images),
-  // prefer those for the gallery; otherwise fall back to product-level images.
-  const variantImages: string[] =
-    hasVariants && selectedVariant?.images?.length
-      ? (selectedVariant.images as string[]).filter(Boolean)
-      : [];
-
-  const images: string[] =
-    variantImages.length > 0 ? variantImages : baseProductImages;
+    product.hasVariants === true || (product.subProducts?.length ?? 0) > 0;
+  const images: string[] = getDisplayImages(product, selectedVariant);
+  const displayDescription = getDisplayDescription(product, selectedVariant);
   const imagesLowExplicit =
     product.imagesLow?.length > 0
       ? product.imagesLow
@@ -535,35 +524,15 @@ export default function ProductDetail() {
           {/* Product Images */}
           <div className="w-full max-w-sm sm:max-w-md mx-auto md:mx-0">
             <div
-              className="bg-gray-100 rounded-lg overflow-hidden mb-4 relative cursor-zoom-in"
-              onMouseMove={handleImageMouseMove}
-              onMouseLeave={handleImageMouseLeave}
-              style={{ minHeight: "220px" }}
+              className="bg-gray-100 rounded-lg overflow-hidden mb-4 flex items-center justify-center"
             >
               {displayImage ? (
-                <div
-                  className="absolute inset-0 w-full h-full transition-transform duration-75 ease-out"
-                  style={{
-                    transform: imageZoom.active ? "scale(2)" : "scale(1)",
-                    transformOrigin: `${imageZoom.originX}% ${imageZoom.originY}%`,
-                  }}
-                >
-                  <ProgressiveImage
-                    src={displayImage}
-                    placeholderSrc={displayImageLow}
-                    alt={product.name}
-                    loading="eager"
-                    /* Product gallery image: cap width on desktop, full width on mobile */
-                    sizes="(min-width: 1024px) 480px, (min-width: 640px) 80vw, 100vw"
-                    srcSet={
-                      displayImage
-                        ? buildSrcSet(displayImage, [320, 480, 640, 800, 960, 1200])
-                        : undefined
-                    }
-                    containerClassName="absolute inset-0 h-full w-full"
-                    className="object-contain"
-                  />
-                </div>
+                <img
+                  src={displayImage}
+                  alt={product.name}
+                  loading="eager"
+                  className="w-full h-auto max-h-[260px] sm:max-h-[360px] md:max-h-[520px] object-contain"
+                />
               ) : (
                 <div className="w-full h-64 flex items-center justify-center text-gray-400">
                   No image available
@@ -671,19 +640,27 @@ export default function ProductDetail() {
               )}
             </div>
 
-            {/* Stock Status */}
+            {/* Stock Status – variant-aware when hasVariants */}
             <div className="mb-6">
-              {product.inStock ? (
-                <span className="text-green-600 font-semibold">
-                  In Stock{availableStock != null ? ` (${availableStock} available)` : ""}
-                </span>
-              ) : (
-                <span className="text-red-600 font-semibold">Out of Stock</span>
-              )}
+              {(() => {
+                const inStock =
+                  availableStock != null
+                    ? availableStock > 0
+                    : displayStock !== undefined
+                      ? displayStock > 0
+                      : product.inStock;
+                return inStock ? (
+                  <span className="text-green-600 font-semibold">
+                    In Stock{availableStock != null ? ` (${availableStock} available)` : displayStock != null ? ` (${displayStock} available)` : ""}
+                  </span>
+                ) : (
+                  <span className="text-red-600 font-semibold">Out of Stock</span>
+                );
+              })()}
             </div>
 
-            {/* Short description (plain teaser) when no full description */}
-            {product.shortDescription && !product.description && (
+            {/* Short description (plain teaser) when no full display description */}
+            {product.shortDescription && !displayDescription && (
               <p className="text-gray-600 mb-4 leading-relaxed font-medium">
                 {product.shortDescription}
               </p>
@@ -695,11 +672,11 @@ export default function ProductDetail() {
                 <h3 className="font-semibold mb-2 text-sm">Choose variant</h3>
                 <p className="text-xs text-gray-600 mb-2">Select a variant to add to cart.</p>
                 <div className="flex flex-wrap gap-1.5">
-                  {product.subProducts.map((sp: { id: string; name: string; sku?: string; price?: number; stockCount?: string; stockQuantity?: number; images?: string[] }) => {
+                  {product.subProducts.map((sp: Variant) => {
                     const isSelected = selectedVariant?.id === sp.id;
                     const stockNum =
-                      typeof sp.stockQuantity === "number"
-                        ? sp.stockQuantity
+                      typeof (sp as any).stockQuantity === "number"
+                        ? (sp as any).stockQuantity
                         : sp.stockCount != null
                           ? parseInt(String(sp.stockCount), 10)
                           : null;
@@ -709,9 +686,9 @@ export default function ProductDetail() {
                         key={sp.id}
                         type="button"
                         onClick={() => {
-                          setSelectedVariant(sp);
-                          // When changing variant, reset gallery to first image for that variant.
+                          setSelectedVariantId(sp.id);
                           setSelectedImageIndex(0);
+                          setQuantity(1);
                         }}
                         className={`px-3 py-2 rounded-md border text-left transition text-xs ${
                           isSelected
@@ -950,9 +927,9 @@ export default function ProductDetail() {
               </TabsTrigger>
             </TabsList>
             <TabsContent value="description" className="mt-4">
-              {product.description ? (
+              {displayDescription ? (
                 <div className="prose prose-gray max-w-none text-gray-600 prose-headings:font-semibold prose-p:leading-relaxed prose-ul:my-2 prose-li:my-0">
-                  <ReactMarkdown>{product.description}</ReactMarkdown>
+                  <ReactMarkdown>{displayDescription}</ReactMarkdown>
                 </div>
               ) : product.shortDescription ? (
                 <p className="text-gray-600 leading-relaxed">{product.shortDescription}</p>

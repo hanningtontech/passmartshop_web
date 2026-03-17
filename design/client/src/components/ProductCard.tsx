@@ -6,10 +6,18 @@ import { ProgressiveImage } from "@/components/ProgressiveImage";
 import { useState } from "react";
 import { useCart } from "@/contexts/CartContext";
 import { buildSrcSet, formatCurrency, getLowQualityImageUrl } from "@/lib/imageUtils";
+import {
+  getDisplayCompareAtPrice,
+  getDisplayPrice,
+  getPrimaryVariant,
+  getThumbnail,
+  type Variant,
+} from "@/lib/productUtils";
 
 type ProductCardData = {
   id: string | number;
   name: string;
+  categoryId?: string;
   basePrice?: string;
   originalPrice?: string;
   price?: number;
@@ -17,6 +25,7 @@ type ProductCardData = {
   images?: string[];
   imageUrls?: string[];
   primaryImageUrl?: string;
+  hasVariants?: boolean;
   featured?: boolean;
   isNew?: boolean;
   rating?: number;
@@ -28,7 +37,7 @@ type ProductCardData = {
   localStock?: boolean;
   flashSale?: boolean;
   flashSalePrice?: number | string;
-  subProducts?: Array<{ id: string; name: string; sku?: string; price?: number }>;
+  subProducts?: Variant[];
 };
 
 type ProductCardSize = "default" | "small";
@@ -45,13 +54,8 @@ export default function ProductCard({
 
   const isSmall = size === "small";
 
-  // Normalize price: use flash sale price when product is on flash sale
-  const regularPrice =
-    typeof product.price === "number"
-      ? product.price
-      : product.basePrice
-      ? parseFloat(product.basePrice)
-      : 0;
+  const variant = getPrimaryVariant(product);
+  const regularPrice = getDisplayPrice(product, variant);
   const flashPrice =
     product.flashSalePrice != null
       ? typeof product.flashSalePrice === "number"
@@ -63,7 +67,9 @@ export default function ProductCard({
       ? flashPrice
       : regularPrice;
 
+  const variantCompareAt = getDisplayCompareAtPrice(product, variant);
   const rawOriginal =
+    variantCompareAt ??
     product.compareAtPrice ??
     (product.originalPrice ? parseFloat(product.originalPrice) : null);
   const originalPrice =
@@ -73,12 +79,7 @@ export default function ProductCard({
 
   const discount = originalPrice ? Math.round(((originalPrice - basePrice) / originalPrice) * 100) : 0;
 
-  const imageSrc =
-    (product.images && product.images[0]) ||
-    (product.imageUrls && product.imageUrls[0]) ||
-    product.primaryImageUrl ||
-    "";
-  const cardImageSrc = imageSrc;
+  const cardImageSrc = getThumbnail(product, variant) ?? "";
   const cardImageLow = cardImageSrc ? getLowQualityImageUrl(cardImageSrc) : null;
   const cardImageSrcSet = cardImageSrc
     ? buildSrcSet(cardImageSrc, isSmall ? [160, 240, 320, 400] : [240, 360, 480, 640])
