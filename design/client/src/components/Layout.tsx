@@ -233,7 +233,7 @@ export default function Layout({ children }: LayoutProps) {
   };
 
   const navLinks = [
-    { label: "Home", path: "/" },
+    { label: "Home", path: "/home" },
     { label: "Shop", path: "/shop" },
     { label: "Flash Sale", path: "/flash-sale" },
     { label: "About Us", path: "/about" },

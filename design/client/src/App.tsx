@@ -26,7 +26,8 @@ import Account from "./pages/Account";
 function Router() {
   return (
     <Switch>
-      <Route path={"/"} component={Home} />
+      <Route path={"/"} component={Shop} />
+      <Route path={"/home"} component={Home} />
       <Route path={"/shop"} component={Shop} />
       <Route path={"/product/:id"} component={ProductDetail} />
       <Route path={"/cart"} component={Cart} />

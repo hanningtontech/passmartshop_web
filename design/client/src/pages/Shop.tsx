@@ -449,8 +449,8 @@ export default function Shop() {
 
           {/* Products Grid */}
             <div className="flex-1 min-w-0">
-            {/* Sort tab bar */}
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+            {/* Sort / Filters bar (mobile minimized to save space) */}
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-3 md:mb-6">
               <Button
                 variant="outline"
                 size="sm"
@@ -460,7 +460,7 @@ export default function Shop() {
                 <Filter className="h-4 w-4 mr-2" />
                 Filters
               </Button>
-              <div className="flex flex-wrap gap-1 border-b border-gray-200">
+              <div className="hidden md:flex flex-wrap gap-1 border-b border-gray-200">
                 {[
                   { value: "rating", label: "Popularity" },
                   { value: "newest", label: "Newest" },
