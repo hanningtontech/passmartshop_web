@@ -15,6 +15,7 @@ import {
 } from "@/config/checkout";
 import { db } from "@/lib/firebase";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { useAuth } from "@/contexts/AuthContext";
 
 const MPESA_TILL_NUMBER = "0740730781";
 
@@ -44,6 +45,7 @@ export default function Checkout() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("M-Pesa");
   const [mpesaTransactionCode, setMpesaTransactionCode] = useState("");
   const [deliveryArea, setDeliveryArea] = useState<string>("");
+  const { user, profile } = useAuth();
 
   const subtotal = totalPrice;
   const tax = subtotal * TAX_RATE;
@@ -88,6 +90,8 @@ export default function Checkout() {
         paymentStatus,
         mpesaTransactionCode: variables.mpesaTransactionCode ?? null,
         status: "pending",
+        userId: (variables as any).userId ?? null,
+        username: (variables as any).username ?? null,
         items: variables.items.map((i) => ({
           productId: i.productId,
           productName: i.productName,
@@ -158,7 +162,9 @@ export default function Checkout() {
       total: subtotal + tax + computedShipping,
       paymentMethod,
       mpesaTransactionCode: paymentMethod === "M-Pesa" ? mpesaTransactionCode.trim() : undefined,
-    });
+      userId: user?.uid,
+      username: profile?.username ?? null,
+    } as any);
   };
 
   if (items.length === 0 && !orderPlaced) {

@@ -6,6 +6,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { CartProvider } from "./contexts/CartContext";
 import { BehaviorProvider } from "./contexts/BehaviorContext";
+import { AuthProvider } from "./contexts/AuthContext";
 import Home from "./pages/Home";
 import Shop from "./pages/Shop";
 import ProductDetail from "./pages/ProductDetail";
@@ -20,6 +21,7 @@ import ShippingPolicy from "./pages/ShippingPolicy";
 import TrackOrder from "./pages/TrackOrder";
 import FlashSale from "./pages/FlashSale";
 import Layout from "./components/Layout";
+import Account from "./pages/Account";
 
 function Router() {
   return (
@@ -31,6 +33,7 @@ function Router() {
       <Route path={"/checkout"} component={Checkout} />
       <Route path={"/flash-sale"} component={FlashSale} />
       <Route path={"/track-order"} component={TrackOrder} />
+      <Route path={"/account"} component={Account} />
       <Route path={"/about"} component={About} />
       <Route path={"/contact"} component={Contact} />
       <Route path={"/privacy-policy"} component={PrivacyPolicy} />
@@ -50,12 +53,14 @@ function App() {
       <ThemeProvider defaultTheme="light">
         <CartProvider>
           <BehaviorProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Layout>
-              <Router />
-            </Layout>
-          </TooltipProvider>
+            <AuthProvider>
+              <TooltipProvider>
+                <Toaster />
+                <Layout>
+                  <Router />
+                </Layout>
+              </TooltipProvider>
+            </AuthProvider>
           </BehaviorProvider>
         </CartProvider>
       </ThemeProvider>

@@ -17,6 +17,7 @@ import { useCart } from "@/contexts/CartContext";
 import { useProductTags } from "@/hooks/useProductTags";
 import { useBehavior } from "@/contexts/BehaviorContext";
 import FlashSaleStrip from "@/components/FlashSaleStrip";
+import { useAuth } from "@/contexts/AuthContext";
 
 const MAX_TAGS = 20;
 
@@ -41,6 +42,7 @@ export default function Layout({ children }: LayoutProps) {
   const { tags: productTags, loading: tagsLoading } = useProductTags();
   const { recordSearch, recentSearches } = useBehavior();
   const [displayTags, setDisplayTags] = useState<string[]>([]);
+  const { user } = useAuth();
 
   useEffect(() => {
     if (tagsLoading || !productTags.length) {
@@ -136,6 +138,15 @@ export default function Layout({ children }: LayoutProps) {
 
             {/* Right Actions */}
             <div className="flex items-center gap-4">
+              {/* Account */}
+              <Link href="/account">
+                <Button
+                  variant="outline"
+                  className="hidden sm:inline-flex"
+                >
+                  {user ? "My Account" : "Sign In"}
+                </Button>
+              </Link>
               {/* Cart Icon */}
               <Link href="/cart">
                 <div className="relative cursor-pointer">

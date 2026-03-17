@@ -1,0 +1,13 @@
+---
+description: Admin web app context – not the user shop; Firebase site and passmart.com
+globs: passmartshop-admin-modern-ui/**
+alwaysApply: false
+---
+
+# Admin Web – Project Context
+
+- **This codebase is the ADMIN web app**, not the customer-facing shop.
+- **User shop (storefront):** Lives in `design/`, deployed to Firebase Hosting default site. **Custom domain: passmart.com** (and https://passmartshop.web.app). Do not change or deploy from this admin project in a way that overwrites the shop.
+- **Admin app:** Run the admin at **https://passmartshop-admin.web.app**. Deploys to the **separate** Firebase Hosting site **passmartshop-admin**. Optional custom domain: e.g. **admin.passmart.com** (add in Firebase Console if desired).
+- **Firebase project:** `passmartshop` (same as the shop; two Hosting sites in one project).
+- When editing Firebase config, build, or deploy in this admin project: always use **site** `passmartshop-admin` in `firebase.json` so deploys never overwrite the user site at passmart.com.
