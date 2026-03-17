@@ -108,8 +108,11 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Shop By Category (similar to Vicmer) */}
-      <section className="py-16 bg-white">
+      {/* Everything below hero is hidden when hideFeatures is active to maximize viewport */}
+      {!hideFeatures && (
+        <>
+          {/* Shop By Category (similar to Vicmer) */}
+          <section className="py-16 bg-white">
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center mb-10">
             <div>
@@ -153,11 +156,11 @@ export default function Home() {
               ))}
             </div>
           )}
-        </div>
-      </section>
+            </div>
+          </section>
 
       {/* Flash Sale Section – only when there are flash sale products */}
-      {flashSaleProducts.length > 0 && !hideFeatures && (
+      {flashSaleProducts.length > 0 && (
         <section className="py-16 bg-gradient-to-b from-orange-50 to-white">
           <div className="container mx-auto px-4">
             <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
@@ -205,9 +208,8 @@ export default function Home() {
         </section>
       )}
 
-      {/* Features Section */}
-      {!hideFeatures && (
-        <section className="py-16 bg-slate-50">
+          {/* Features Section */}
+          <section className="py-16 bg-slate-50">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div className="text-center">
@@ -232,11 +234,10 @@ export default function Home() {
             </div>
           </div>
         </div>
-        </section>
-      )}
+          </section>
 
-      {/* Featured Products Section */}
-      <section className="py-16">
+          {/* Featured Products Section */}
+          <section className="py-16">
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center mb-12">
             <h2 className="text-4xl font-bold">Featured Products</h2>
@@ -263,10 +264,10 @@ export default function Home() {
             </div>
           )}
         </div>
-      </section>
+          </section>
 
-      {/* New Arrivals Section */}
-      <section className="py-16 bg-slate-50">
+          {/* New Arrivals Section */}
+          <section className="py-16 bg-slate-50">
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center mb-12">
             <h2 className="text-4xl font-bold">New Arrivals</h2>
@@ -293,10 +294,10 @@ export default function Home() {
             </div>
           )}
         </div>
-      </section>
+          </section>
 
-      {/* CTA Section */}
-      <section className="py-16 bg-gradient-to-r from-orange-500 to-orange-600 text-white">
+          {/* CTA Section */}
+          <section className="py-16 bg-gradient-to-r from-orange-500 to-orange-600 text-white">
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-4xl font-bold mb-4">Special Offers Available</h2>
           <p className="text-xl mb-8">Sign up for our newsletter to get exclusive deals and updates</p>
@@ -309,7 +310,9 @@ export default function Home() {
             <Button className="bg-white text-orange-600 hover:bg-gray-100">Subscribe</Button>
           </div>
         </div>
-      </section>
+          </section>
+        </>
+      )}
     </div>
   );
 }

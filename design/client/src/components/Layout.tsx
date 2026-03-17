@@ -132,7 +132,10 @@ export default function Layout({ children }: LayoutProps) {
       </div>
 
       {/* Header */}
-      <header className="sticky top-0 z-50 w-full bg-white shadow-sm print:hidden">
+      <header
+        className={`sticky top-0 z-50 w-full bg-white shadow-sm print:hidden transform transition-transform duration-300 will-change-transform ${hideFeatures ? "-translate-y-full" : "translate-y-0"
+          }`}
+      >
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between gap-4">
             {/* Logo */}
@@ -276,8 +279,9 @@ export default function Layout({ children }: LayoutProps) {
       </UiProvider>
 
       {/* Footer */}
-      <footer className="bg-slate-900 text-gray-300 mt-16 print:hidden">
-        <div className="container mx-auto px-4 py-16">
+      {!hideFeatures && (
+        <footer className="bg-slate-900 text-gray-300 mt-16 print:hidden">
+          <div className="container mx-auto px-4 py-16">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
             {/* About */}
             <div>
@@ -386,8 +390,9 @@ export default function Layout({ children }: LayoutProps) {
               </a>
             </div>
           </div>
-        </div>
-      </footer>
+          </div>
+        </footer>
+      )}
     </div>
   );
 }
