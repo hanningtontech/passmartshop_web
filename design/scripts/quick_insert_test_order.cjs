@@ -9,26 +9,26 @@ const payload = {
   "0": {
     "json": {
       customerEmail: "integration-test+node@passmartshop.com",
+      customerName: "Integration Test",
       customerPhone: "+10000000000",
+      shippingAddress: "1 Test Way",
+      shippingCity: "Testville",
+      shippingPostalCode: "00000",
+      shippingCountry: "US",
       items: [
         {
-          productId: "test-prod-1",
-          variantId: "default",
-          price: 1999,
-          quantity: 1
+          productId: 1,
+          variantId: 1,
+          productName: "Test Product",
+          quantity: 1,
+          price: 1999
         }
       ],
       subtotal: 1999,
-      shipping: 0,
+      shippingCost: 0,
+      tax: 0,
       total: 1999,
-      payment: { method: "test", status: "paid" },
-      shippingAddress: {
-        name: "Test Buyer",
-        line1: "1 Test Way",
-        city: "Testville",
-        postalCode: "00000",
-        country: "US"
-      }
+      paymentMethod: "Cash on Delivery"
     }
   }
 };
