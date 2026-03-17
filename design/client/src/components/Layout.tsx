@@ -1,4 +1,4 @@
-import { useState, useEffect, ReactNode } from "react";
+import { useState, useEffect, ReactNode, useRef } from "react";
 import { Link, useLocation } from "wouter";
 import {
   Search,
@@ -18,6 +18,7 @@ import { useProductTags } from "@/hooks/useProductTags";
 import { useBehavior } from "@/contexts/BehaviorContext";
 import FlashSaleStrip from "@/components/FlashSaleStrip";
 import { useAuth } from "@/contexts/AuthContext";
+import { UiProvider } from "@/contexts/UiContext";
 
 const MAX_TAGS = 20;
 
@@ -36,6 +37,7 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [hideFeatures, setHideFeatures] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [, setLocation] = useLocation();
   const { totalItems } = useCart();
@@ -43,6 +45,8 @@ export default function Layout({ children }: LayoutProps) {
   const { recordSearch, recentSearches } = useBehavior();
   const [displayTags, setDisplayTags] = useState<string[]>([]);
   const { user } = useAuth();
+  const lastScrollY = useRef(0);
+  const ticking = useRef(false);
 
   useEffect(() => {
     if (tagsLoading || !productTags.length) {
@@ -58,6 +62,32 @@ export default function Layout({ children }: LayoutProps) {
     const combined = [...suggested, ...shuffledOther].slice(0, MAX_TAGS);
     setDisplayTags(combined);
   }, [tagsLoading, productTags, recentSearches]);
+
+  useEffect(() => {
+    function onScroll() {
+      const currentY = window.scrollY || window.pageYOffset;
+      const delta = currentY - lastScrollY.current;
+
+      // avoid frequent updates
+      if (!ticking.current) {
+        window.requestAnimationFrame(() => {
+          // scroll down and passed threshold -> hide features
+          if (delta > 20 && currentY > 100) {
+            setHideFeatures(true);
+          } else if (delta < -10) {
+            // scrolling up -> show features
+            setHideFeatures(false);
+          }
+          lastScrollY.current = currentY;
+          ticking.current = false;
+        });
+        ticking.current = true;
+      }
+    }
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -212,7 +242,7 @@ export default function Layout({ children }: LayoutProps) {
         </nav>
 
         {/* Tag chips – thin divider line above, gap below nav */}
-        {(tagsLoading || displayTags.length > 0) && (
+        {!hideFeatures && (tagsLoading || displayTags.length > 0) && (
           <div className="container mx-auto px-4 pb-3 border-t border-gray-200" style={{ paddingTop: "20px" }}>
             <div
               className="flex flex-nowrap gap-2 overflow-x-auto overflow-y-hidden scrollbar-hide"
@@ -237,11 +267,13 @@ export default function Layout({ children }: LayoutProps) {
         )}
 
         {/* Flash sale strip – compact cards, dismissible, just below tags */}
-        <FlashSaleStrip />
+        {!hideFeatures && <FlashSaleStrip />}
       </header>
 
       {/* Main Content */}
-      <main className="flex-1">{children}</main>
+      <UiProvider value={{ hideFeatures }}>
+        <main className="flex-1">{children}</main>
+      </UiProvider>
 
       {/* Footer */}
       <footer className="bg-slate-900 text-gray-300 mt-16 print:hidden">

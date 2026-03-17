@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { db } from "@/lib/firebase";
 import { collection, getDocs } from "firebase/firestore";
 import { FLASH_SALE_END_DATE, FLASH_SALE_TITLE } from "@/config/flashSale";
+import { useUi } from "@/contexts/UiContext";
 
 function useCountdown(endDate: Date) {
   const [left, setLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
@@ -36,6 +37,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<any[]>([]);
   const countdown = useCountdown(FLASH_SALE_END_DATE);
+  const { hideFeatures } = useUi();
 
   useEffect(() => {
     async function load() {
@@ -155,7 +157,7 @@ export default function Home() {
       </section>
 
       {/* Flash Sale Section – only when there are flash sale products */}
-      {flashSaleProducts.length > 0 && (
+      {flashSaleProducts.length > 0 && !hideFeatures && (
         <section className="py-16 bg-gradient-to-b from-orange-50 to-white">
           <div className="container mx-auto px-4">
             <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
@@ -204,7 +206,8 @@ export default function Home() {
       )}
 
       {/* Features Section */}
-      <section className="py-16 bg-slate-50">
+      {!hideFeatures && (
+        <section className="py-16 bg-slate-50">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div className="text-center">
@@ -229,7 +232,8 @@ export default function Home() {
             </div>
           </div>
         </div>
-      </section>
+        </section>
+      )}
 
       {/* Featured Products Section */}
       <section className="py-16">
