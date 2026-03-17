@@ -263,7 +263,10 @@ class SDKServer {
     const session = await this.verifySession(sessionCookie);
 
     if (!session) {
-      throw ForbiddenError("Invalid session cookie");
+      // Treat missing or invalid session as unauthenticated instead of throwing.
+      // Public procedures can proceed without a user; authenticated procedures
+      // should still check ctx.user and reject as appropriate.
+      return null as unknown as User;
     }
 
     const sessionUserId = session.openId;
